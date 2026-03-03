@@ -1,15 +1,43 @@
-name: Deploy to Cloudflare Workers
+name: CI & Deploy to Cloudflare Workers
 
 on:
+  pull_request:
   push:
     branches:
       - main
   workflow_dispatch:
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build OpenNext Worker
+        run: npm run build:worker
+
   deploy:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     name: Deploy to Cloudflare Workers
+    needs: validate
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
