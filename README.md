@@ -8,10 +8,11 @@
 - 💾 使用 Cloudflare KV 存储数据
 - 🎨 保留 zero-nav 简洁设计风格
 - 🔐 管理后台 Token 认证
-- ✏️ 在线 CRUD 书签管理
+- ✏️ 在线 CRUD 书签管理（支持图标、简介、分类）
 - 📦 支持数据导入/导出 (JSON)
 - 🔄 自动备份历史版本
 - 📱 响应式设计，支持移动端
+- ⚙️ /admin 后台可配置主页标题/副标题/页脚等内容
 
 ## 🏗️ 技术栈
 
@@ -164,6 +165,8 @@ ADMIN_TOKEN = "your-secret-token"
 ### 方式一：GitHub Actions 自动部署（推荐）
 
 使用 GitHub Actions 实现 CI/CD 自动部署。
+
+工作流包含 `pull_request` 构建校验（TypeScript + Next.js + Worker build）以及 `main` 分支自动部署。
 
 #### 1. 配置 GitHub Secrets
 
