@@ -1,5 +1,5 @@
 import type { SiteData } from './types';
-import { DEFAULT_SITE_DATA } from './types';
+import { DEFAULT_SITE_DATA, normalizeSiteData } from './types';
 
 const KV_KEY = 'site:bookmarks';
 
@@ -7,12 +7,12 @@ export async function getSiteData(kv: KVNamespace): Promise<SiteData> {
   try {
     const data = await kv.get(KV_KEY, 'json');
     if (data) {
-      return data as SiteData;
+      return normalizeSiteData(data as SiteData);
     }
   } catch (error) {
     console.error('Failed to get site data from KV:', error);
   }
-  return DEFAULT_SITE_DATA;
+  return normalizeSiteData(DEFAULT_SITE_DATA);
 }
 
 export async function saveSiteData(kv: KVNamespace, data: SiteData): Promise<void> {
@@ -21,7 +21,7 @@ export async function saveSiteData(kv: KVNamespace, data: SiteData): Promise<voi
 
   // Update version and timestamp
   const updatedData: SiteData = {
-    ...data,
+    ...normalizeSiteData(data),
     version: data.version + 1,
     updatedAt: new Date().toISOString(),
   };
