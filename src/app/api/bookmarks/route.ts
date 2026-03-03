@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSiteData } from '@/lib/kv';
+import { DEFAULT_SITE_DATA, normalizeSiteData } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,17 +9,7 @@ export async function GET(request: NextRequest) {
 
     if (!kv) {
       // For development, return mock data
-      return NextResponse.json({
-        version: 1,
-        updatedAt: new Date().toISOString(),
-        bookmarks: [],
-        meta: {
-          customElements: {
-            headerText: '在线服务',
-            footerText: 'Powered by zero-nav-next',
-          },
-        },
-      });
+      return NextResponse.json(normalizeSiteData(DEFAULT_SITE_DATA));
     }
 
     const data = await getSiteData(kv as KVNamespace);
