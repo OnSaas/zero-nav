@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSiteData, saveSiteData } from '@/lib/kv';
 import { assertAdminAuth } from '@/lib/auth';
 import type { SiteData, Bookmark } from '@/lib/types';
+import { normalizeSiteData } from '@/lib/types';
 
 interface CloudflareEnv {
   BOOKMARKS_KV: KVNamespace;
@@ -41,11 +42,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, item, data } = body;
 
-    let currentData = await getSiteData(env.BOOKMARKS_KV);
+    let currentData = normalizeSiteData(await getSiteData(env.BOOKMARKS_KV));
 
     if (action === 'upsert' && item) {
       // Upsert bookmark
-      const bookmark: Bookmark = item;
+      const bookmark: Bookmark = {
+        ...item,
+        icon: item.icon || '',
+        description: item.description || '',
+      };
       const existingIndex = currentData.bookmarks.findIndex(b => b.id === bookmark.id);
 
       if (existingIndex >= 0) {
@@ -57,7 +62,7 @@ export async function POST(request: NextRequest) {
       }
     } else if (action === 'replace' && data) {
       // Replace entire dataset (for import)
-      currentData = data;
+      currentData = normalizeSiteData(data);
     } else {
       return NextResponse.json(
         { error: 'Invalid action or missing data' },
@@ -65,6 +70,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    currentData = normalizeSiteData(currentData);
     await saveSiteData(env.BOOKMARKS_KV, currentData);
 
     return NextResponse.json({ success: true, data: currentData });
@@ -95,9 +101,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const currentData = await getSiteData(env.BOOKMARKS_KV);
+    let currentData = await getSiteData(env.BOOKMARKS_KV);
     currentData.bookmarks = currentData.bookmarks.filter(b => b.id !== id);
 
+    currentData = normalizeSiteData(currentData);
     await saveSiteData(env.BOOKMARKS_KV, currentData);
 
     return NextResponse.json({ success: true, data: currentData });
