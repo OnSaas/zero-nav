@@ -76,14 +76,13 @@ wrangler kv:namespace create "BOOKMARKS" --preview
 在本地更新 `wrangler.toml`，然后提交到 GitHub：
 
 ```toml
-name = "zero-nav-next"
-main = ".open-next/worker.js"
+name = "zero-nav"
+main = "src/index.ts"
 compatibility_date = "2025-11-20"
 
 [[kv_namespaces]]
 binding = "BOOKMARKS_KV"
 id = "xxxxxxxx"              # 替换为你的生产 KV ID
-preview_id = "yyyyyyyy"      # 替换为你的预览 KV ID
 
 # ADMIN_TOKEN 从 GitHub Secrets 注入，不要在这里设置
 ```
@@ -134,8 +133,8 @@ git push origin main
 
 部署成功后：
 
-1. **访问首页**：`https://zero-nav-next.<your-subdomain>.workers.dev`
-2. **访问管理**：`https://zero-nav-next.<your-subdomain>.workers.dev/admin`
+1. **访问首页**：`https://zero-nav.<your-subdomain>.workers.dev`
+2. **访问管理**：`https://zero-nav.<your-subdomain>.workers.dev/admin`
 3. 使用你设置的 `ADMIN_TOKEN` 登录
 
 ---
