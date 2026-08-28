@@ -1,13 +1,27 @@
 name = "zero-nav-next"
+account_id = "22788d96116325ff531105e98c23bc95"
 main = ".open-next/worker.js"
 compatibility_date = "2025-11-20"
+compatibility_flags = ["nodejs_compat"]
 
 [[kv_namespaces]]
 binding = "BOOKMARKS_KV"
-id = "020b5817371c4bccab3771237ae56df1"              # 替换为实际的 KV namespace ID
-preview_id = "your-preview-kv-namespace-id"  # 替换为实际的预览 KV ID
+id = "bb118ee538a04aafbd60995912677f8c"
 
-# ADMIN_TOKEN 从环境变量或 GitHub Secrets 注入
-# 本地开发可以在这里设置，生产环境从 Secrets 读取
-# [vars]
-# ADMIN_TOKEN = "local-dev-token"
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[env.production]
+name = "zero-nav-next"
+compatibility_date = "2025-11-20"
+compatibility_flags = ["nodejs_compat"]
+account_id = "22788d96116325ff531105e98c23bc95"
+
+[[env.production.kv_namespaces]]
+binding = "BOOKMARKS_KV"
+id = "bb118ee538a04aafbd60995912677f8c"
+
+[env.production.assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
