@@ -236,7 +236,7 @@
     if (itemBox) {
       itemBox.innerHTML = items
         .map((it) => {
-          const icon =
+          const iconHtml =
             it.icon?.type === 'svg'
               ? it.icon.value
               : it.icon?.value
@@ -244,12 +244,14 @@
                 : '';
           return `<li class="item-row ${it.visible ? '' : 'hidden-row'}" draggable="true" data-id="${it.id}">
             <input type="checkbox" class="check" data-act="select" ${selected.has(it.id) ? 'checked' : ''}>
-            ${icon}
+            ${iconHtml}
             <span class="grow"><span class="title">${escapeHtml(it.title)}</span>
             <div class="url">${escapeHtml(it.url)}</div></span>
-            <button class="ghost icon-btn" data-act="toggle-item" title="${it.visible ? '隐藏' : '显示'}" aria-label="${it.visible ? '隐藏' : '显示'}">${icon(it.visible ? 'eye' : 'eye-off')}</button>
-            <a class="btn ghost icon-btn" href="/admin/items/${encodeURIComponent(it.id)}" title="编辑" aria-label="编辑">${icon('pencil')}</a>
-            <button class="danger icon-btn" data-act="del-item" title="删除" aria-label="删除">${icon('trash')}</button>
+            <span class="row-actions">
+              <button class="ghost icon-btn" data-act="toggle-item" title="${it.visible ? '隐藏' : '显示'}" aria-label="${it.visible ? '隐藏' : '显示'}">${icon(it.visible ? 'eye' : 'eye-off')}</button>
+              <a class="btn ghost icon-btn" href="/admin/items/${encodeURIComponent(it.id)}" title="编辑" aria-label="编辑">${icon('pencil')}</a>
+              <button class="danger icon-btn" data-act="del-item" title="删除" aria-label="删除">${icon('trash')}</button>
+            </span>
           </li>`;
         })
         .join('') || '<li class="muted" style="padding:12px">还没有链接</li>';
@@ -283,7 +285,8 @@
     const li = e.target.closest('.item-row');
     if (!li) return;
     const id = li.dataset.id;
-    const act = e.target.dataset.act;
+    const hit = e.target.closest('[data-act]');
+    const act = hit ? hit.dataset.act : undefined;
     if (act === 'select') {
       if (e.target.checked) selected.add(id);
       else selected.delete(id);

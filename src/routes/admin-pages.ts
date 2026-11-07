@@ -68,7 +68,7 @@ adminPages.get('/admin', async (c) => {
   const csrf = c.get('csrf');
   const body = `
     <div class="toolbar">
-      <input type="search" id="item-search" placeholder="搜索标题 / URL / 描述" style="max-width:280px">
+      <input type="search" id="item-search" class="search-input" placeholder="搜索标题 / URL / 描述">
       <a class="btn" href="/admin/items/new">新建链接</a>
       <button type="button" id="bulk-del" class="danger">删除所选</button>
     </div>
@@ -99,12 +99,12 @@ adminPages.get('/admin/items', async (c) => {
     )
     .join('');
   const body = `<form class="toolbar" method="get" action="/admin/items">
-      <input type="search" name="q" value="${escapeAttr(c.req.query('q') || '')}" placeholder="搜索" style="max-width:240px">
+      <input type="search" name="q" value="${escapeAttr(c.req.query('q') || '')}" placeholder="搜索" class="search-input sm">
       <button type="submit" class="secondary">筛选</button>
       <a class="btn" href="/admin/items/new">新建</a>
     </form>
-    <div class="card"><table><thead><tr><th>标题</th><th>URL</th><th>状态</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="4">没有匹配的链接</td></tr>'}</tbody></table></div>`;
+    <div class="card"><div class="table-scroll"><table><thead><tr><th>标题</th><th>URL</th><th>状态</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4">没有匹配的链接</td></tr>'}</tbody></table></div></div>`;
   return c.html(adminLayout({ title: '链接', csrf, active: 'items', nav, body }));
 });
 
@@ -270,8 +270,8 @@ adminPages.get('/admin/history', async (c) => {
     .join('');
   const body = `<div class="card">
     <p class="muted">写入前自动备份，保留 30 天。回滚会再写一条「回滚前」历史。</p>
-    <table><thead><tr><th>时间</th><th>当时链接</th><th>相对现在</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="4">还没有历史</td></tr>'}</tbody></table>
+    <div class="table-scroll"><table><thead><tr><th>时间</th><th>当时链接</th><th>相对现在</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4">还没有历史</td></tr>'}</tbody></table></div>
   </div>`;
   return c.html(adminLayout({ title: '历史', csrf, active: 'history', nav, body }));
 });
