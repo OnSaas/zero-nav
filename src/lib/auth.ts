@@ -119,7 +119,7 @@ export function csrfOk(c: AppContext): boolean {
   return got === expected;
 }
 
-export async function csrfFromForm(c: AppContext, body: FormData | Record<string, string>): Promise<boolean> {
+export async function csrfFromForm(c: AppContext, body: FormData | Record<string, unknown>): Promise<boolean> {
   if (c.get('authMode') === 'token') return true;
   const expected = c.get('csrf');
   if (!expected) return false;
