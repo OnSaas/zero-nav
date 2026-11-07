@@ -71,7 +71,7 @@ export function renderPublicPage(nav: NavData): string {
 </html>`;
 }
 
-type NavKey = 'dash' | 'categories' | 'items' | 'settings' | 'import' | 'export' | 'history';
+type NavKey = 'dash' | 'categories' | 'items' | 'settings' | 'history';
 
 export function adminLayout(opts: {
   title: string;
@@ -98,8 +98,6 @@ export function adminLayout(opts: {
       <a href="/admin/categories" class="${opts.active === 'categories' ? 'active' : ''}">分类</a>
       <a href="/admin/items" class="${opts.active === 'items' ? 'active' : ''}">链接</a>
       <a href="/admin/settings" class="${opts.active === 'settings' ? 'active' : ''}">设置</a>
-      <a href="/admin/import" class="${opts.active === 'import' ? 'active' : ''}">导入</a>
-      <a href="/admin/export" class="${opts.active === 'export' ? 'active' : ''}">导出</a>
       <a href="/admin/history" class="${opts.active === 'history' ? 'active' : ''}">历史</a>
     </nav>
     <div class="top-actions">

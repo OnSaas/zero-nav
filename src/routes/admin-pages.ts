@@ -212,6 +212,21 @@ adminPages.get('/admin/settings', async (c) => {
   const nav = await getNavData(c.env.BOOKMARKS_KV);
   const s = nav.site;
   const csrf = c.get('csrf');
+  const importForms = ['json', 'yaml', 'netscape'].map((format, i) => {
+    const label = format === 'json' ? '本系统 JSON / 旧 site:bookmarks' : format === 'yaml' ? 'YAML（含旧 config.yml）' : '浏览器书签 HTML（Netscape）';
+    return `<form class="field" style="margin-top:20px">
+        <input type="hidden" name="csrf" value="${escapeAttr(csrf)}">
+        <input type="hidden" name="format" value="${format}">
+        <h3>${i + 1}. ${label}</h3>
+        <textarea name="payload" placeholder="粘贴内容"></textarea>
+        <label><input type="checkbox" name="replace"> 覆盖全部（否则按 URL 去重合并）</label>
+        <div class="toolbar">
+          <button type="button" class="secondary" data-preview-import>预览解析</button>
+          <button type="submit" formmethod="post" formaction="/admin/import">确认导入</button>
+        </div>
+        <div class="preview-box muted">预览结果会显示在这里</div>
+      </form>`;
+  }).join('');
   const body = `<form class="card" method="post" action="/admin/settings">
     <input type="hidden" name="csrf" value="${escapeAttr(csrf)}">
     <div class="field"><label>站点标题</label><input name="title" value="${escapeAttr(s.title)}"></div>
@@ -221,7 +236,21 @@ adminPages.get('/admin/settings', async (c) => {
     <div class="field"><label><input type="checkbox" name="showDescription" ${s.showDescription ? 'checked' : ''}> 显示描述</label></div>
     <div class="field"><label><input type="checkbox" name="showCategoryTitle" ${s.showCategoryTitle ? 'checked' : ''}> 显示分类标题</label></div>
     <button type="submit">保存设置</button>
-  </form>`;
+  </form>
+  <div class="card" id="export" style="margin-top:14px">
+    <h2 class="section-title">导出</h2>
+    <p>导出当前完整数据（含隐藏项）。</p>
+    <div class="toolbar">
+      <a class="btn" href="/api/admin/export?format=json">导出 JSON</a>
+      <a class="btn secondary" href="/api/admin/export?format=yaml">导出 YAML</a>
+      <a class="btn ghost" href="/api/admin/export?format=legacy-yaml">导出旧版 config.yml</a>
+    </div>
+  </div>
+  <div class="card" id="import" style="margin-top:14px">
+    <h2 class="section-title">导入</h2>
+    <p>导入会先预览解析结果，确认后再写入。三种格式分开展示。</p>
+    ${importForms}
+  </div>`;
   return c.html(adminLayout({ title: '设置', csrf, active: 'settings', nav, body }));
 });
 
@@ -241,29 +270,7 @@ adminPages.post('/admin/settings', async (c) => {
   return c.redirect('/admin/settings');
 });
 
-adminPages.get('/admin/import', async (c) => {
-  const nav = await getNavData(c.env.BOOKMARKS_KV);
-  const csrf = c.get('csrf');
-  const body = `<div class="card">
-    <p>导入会先预览解析结果，确认后再写入。三种格式分开展示。</p>
-    ${['json', 'yaml', 'netscape'].map((format, i) => {
-      const label = format === 'json' ? '本系统 JSON / 旧 site:bookmarks' : format === 'yaml' ? 'YAML（含旧 config.yml）' : '浏览器书签 HTML（Netscape）';
-      return `<form class="field" style="margin-top:20px">
-        <input type="hidden" name="csrf" value="${escapeAttr(csrf)}">
-        <input type="hidden" name="format" value="${format}">
-        <h3>${i + 1}. ${label}</h3>
-        <textarea name="payload" placeholder="粘贴内容"></textarea>
-        <label><input type="checkbox" name="replace"> 覆盖全部（否则按 URL 去重合并）</label>
-        <div class="toolbar">
-          <button type="button" class="secondary" data-preview-import>预览解析</button>
-          <button type="submit" formmethod="post" formaction="/admin/import">确认导入</button>
-        </div>
-        <div class="preview-box muted">预览结果会显示在这里</div>
-      </form>`;
-    }).join('')}
-  </div>`;
-  return c.html(adminLayout({ title: '导入', csrf, active: 'import', nav, body }));
-});
+adminPages.get('/admin/import', (c) => c.redirect('/admin/settings#import'));
 
 adminPages.post('/admin/import', async (c) => {
   const body = await c.req.parseBody();
@@ -281,26 +288,14 @@ adminPages.post('/admin/import', async (c) => {
     return c.html(adminLayout({
       title: '导入',
       csrf: c.get('csrf'),
-      active: 'import',
+      active: 'settings',
       nav,
-      body: `<div class="msg err">${escapeHtml(e instanceof Error ? e.message : '导入失败')}</div><p><a href="/admin/import">返回</a></p>`,
+      body: `<div class="msg err">${escapeHtml(e instanceof Error ? e.message : '导入失败')}</div><p><a href="/admin/settings#import">返回</a></p>`,
     }), 400);
   }
 });
 
-adminPages.get('/admin/export', async (c) => {
-  const nav = await getNavData(c.env.BOOKMARKS_KV);
-  const csrf = c.get('csrf');
-  const body = `<div class="card">
-    <p>导出当前完整数据（含隐藏项）。</p>
-    <div class="toolbar">
-      <a class="btn" href="/api/admin/export?format=json">导出 JSON</a>
-      <a class="btn secondary" href="/api/admin/export?format=yaml">导出 YAML</a>
-      <a class="btn ghost" href="/api/admin/export?format=legacy-yaml">导出旧版 config.yml</a>
-    </div>
-  </div>`;
-  return c.html(adminLayout({ title: '导出', csrf, active: 'export', nav, body }));
-});
+adminPages.get('/admin/export', (c) => c.redirect('/admin/settings#export'));
 
 adminPages.get('/admin/history', async (c) => {
   const nav = await getNavData(c.env.BOOKMARKS_KV);
