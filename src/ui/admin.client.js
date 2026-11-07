@@ -30,6 +30,202 @@
     el.textContent = msg;
   }
 
+  const selectChevron = '<svg class="ui-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+  function openDialog(title, cancelValue, build) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'ui-overlay';
+      const card = document.createElement('div');
+      card.className = 'ui-dialog card';
+      card.setAttribute('role', 'dialog');
+      card.setAttribute('aria-modal', 'true');
+      if (title) {
+        const heading = document.createElement('h3');
+        heading.textContent = title;
+        card.appendChild(heading);
+      }
+      overlay.appendChild(card);
+      const previous = document.activeElement;
+      let closed = false;
+      function finish(value) {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener('keydown', onKey);
+        overlay.remove();
+        if (previous && typeof previous.focus === 'function') previous.focus();
+        resolve(value);
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          finish(cancelValue);
+        }
+      }
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) finish(cancelValue);
+      });
+      document.addEventListener('keydown', onKey);
+      document.body.appendChild(overlay);
+      build(card, finish);
+    });
+  }
+
+  function uiConfirm(message, opts) {
+    const danger = !!(opts && opts.danger);
+    return openDialog('', false, (card, finish) => {
+      const text = document.createElement('p');
+      text.className = 'ui-message';
+      text.textContent = message;
+      card.appendChild(text);
+      const actions = document.createElement('div');
+      actions.className = 'ui-actions';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'ghost';
+      cancelBtn.textContent = '取消';
+      cancelBtn.addEventListener('click', () => finish(false));
+      const okBtn = document.createElement('button');
+      okBtn.type = 'button';
+      if (danger) okBtn.className = 'danger';
+      okBtn.textContent = '确定';
+      okBtn.addEventListener('click', () => finish(true));
+      actions.append(cancelBtn, okBtn);
+      card.appendChild(actions);
+      okBtn.focus();
+    });
+  }
+
+  function uiPrompt(title, initialValue) {
+    return openDialog(title, null, (card, finish) => {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = initialValue == null ? '' : initialValue;
+      card.appendChild(input);
+      const actions = document.createElement('div');
+      actions.className = 'ui-actions';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'ghost';
+      cancelBtn.textContent = '取消';
+      cancelBtn.addEventListener('click', () => finish(null));
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.textContent = '保存';
+      saveBtn.addEventListener('click', () => finish(input.value));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          finish(input.value);
+        }
+      });
+      actions.append(cancelBtn, saveBtn);
+      card.appendChild(actions);
+      input.focus();
+    });
+  }
+
+  function uiChoose(title, options) {
+    return openDialog(title, null, (card, finish) => {
+      const list = document.createElement('div');
+      list.className = 'ui-options';
+      options.forEach((option) => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'ui-option';
+        item.textContent = option.label;
+        item.addEventListener('click', () => finish(option.value));
+        list.appendChild(item);
+      });
+      card.appendChild(list);
+      const actions = document.createElement('div');
+      actions.className = 'ui-actions';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'ghost';
+      cancelBtn.textContent = '取消';
+      cancelBtn.addEventListener('click', () => finish(null));
+      actions.appendChild(cancelBtn);
+      card.appendChild(actions);
+      const first = list.querySelector('.ui-option');
+      if (first) first.focus();
+    });
+  }
+
+  function closeSelects(except) {
+    document.querySelectorAll('.ui-select.open').forEach((root) => {
+      if (root === except) return;
+      root.classList.remove('open');
+      const btn = root.querySelector('.ui-select-btn');
+      const menu = root.querySelector('.ui-select-menu');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+      if (menu) menu.hidden = true;
+    });
+  }
+
+  function applySelectValue(root, value) {
+    const hidden = root.querySelector('input[type="hidden"]');
+    if (!hidden) return;
+    hidden.value = value;
+    const options = [...root.querySelectorAll('.ui-select-option')];
+    const chosen = options.find((o) => o.dataset.value === value);
+    const label = root.querySelector('.ui-select-label');
+    if (chosen && label) label.textContent = chosen.textContent;
+    options.forEach((o) => {
+      const on = o === chosen;
+      o.classList.toggle('selected', on);
+      o.setAttribute('aria-selected', String(on));
+    });
+    hidden.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  document.addEventListener('click', (e) => {
+    const option = e.target.closest('.ui-select-option');
+    if (option) {
+      applySelectValue(option.closest('.ui-select'), option.dataset.value);
+      closeSelects();
+      return;
+    }
+    const btn = e.target.closest('.ui-select-btn');
+    if (btn) {
+      const root = btn.closest('.ui-select');
+      const wasOpen = root.classList.contains('open');
+      closeSelects();
+      if (wasOpen) return;
+      root.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
+      const menu = root.querySelector('.ui-select-menu');
+      if (menu) menu.hidden = false;
+      return;
+    }
+    if (!e.target.closest('.ui-select')) closeSelects();
+  });
+
+  document.addEventListener('change', (e) => {
+    const hidden = e.target;
+    if (!hidden || hidden.type !== 'hidden' || typeof hidden.closest !== 'function') return;
+    const root = hidden.closest('.ui-select');
+    if (!root) return;
+    const chosen = [...root.querySelectorAll('.ui-select-option')].find((o) => o.dataset.value === hidden.value);
+    const label = root.querySelector('.ui-select-label');
+    if (chosen && label) label.textContent = chosen.textContent;
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSelects();
+  });
+
+  document.querySelectorAll('form[data-confirm]').forEach((form) => {
+    form.addEventListener('submit', async (e) => {
+      if (form.dataset.confirmed === '1') return;
+      e.preventDefault();
+      if (await uiConfirm(form.dataset.confirm, { danger: true })) {
+        form.dataset.confirmed = '1';
+        form.requestSubmit();
+      }
+    });
+  });
+
   const fetchBtn = document.getElementById('fetch-meta');
   if (fetchBtn) {
     fetchBtn.addEventListener('click', async () => {
@@ -44,7 +240,10 @@
         if (title && data.title && !title.value) title.value = data.title;
         if (title && data.title && title.value === '新链接') title.value = data.title;
         if (icon && data.favicon) icon.value = data.favicon;
-        if (type) type.value = 'favicon';
+        if (type) {
+          type.value = 'favicon';
+          type.dispatchEvent(new Event('change', { bubbles: true }));
+        }
         toast('已抓取标题和图标');
       } catch (e) {
         toast(e.message, 'err');
@@ -109,9 +308,12 @@
         .join('');
     }
     if (mobileSelect) {
-      mobileSelect.innerHTML = nav.categories
-        .map((c) => `<option value="${c.id}" ${c.id === currentCat ? 'selected' : ''}>${escapeHtml(c.name)}</option>`)
-        .join('');
+      mobileSelect.classList.remove('open');
+      mobileSelect.innerHTML = `<input type="hidden" name="cat" value="${escapeAttr(currentCat)}">
+        <button type="button" class="ui-select-btn" aria-haspopup="listbox" aria-expanded="false"><span class="ui-select-label">${escapeHtml(catById(currentCat)?.name || '')}</span>${selectChevron}</button>
+        <div class="ui-select-menu" role="listbox" hidden>${nav.categories
+          .map((c) => `<button type="button" class="ui-select-option${c.id === currentCat ? ' selected' : ''}" role="option" aria-selected="${c.id === currentCat}" data-value="${escapeAttr(c.id)}">${escapeHtml(c.name)}</button>`)
+          .join('')}</div>`;
     }
     const cat = catById(currentCat);
     const items = (cat?.items || [])
@@ -188,7 +390,9 @@
   });
 
   mobileSelect?.addEventListener('change', () => {
-    currentCat = mobileSelect.value;
+    const value = mobileSelect.querySelector('input[type="hidden"]')?.value || '';
+    if (!value || value === currentCat) return;
+    currentCat = value;
     selected.clear();
     render();
   });
@@ -215,7 +419,7 @@
       }
     }
     if (act === 'del-item') {
-      if (!confirm('确定删除这条链接？')) return;
+      if (!(await uiConfirm('确定删除这条链接？', { danger: true }))) return;
       try {
         const data = await api('/api/admin/items/' + id + '/delete', { method: 'POST', body: {} });
         nav = data.data;
@@ -228,7 +432,7 @@
   });
 
   document.getElementById('add-cat')?.addEventListener('click', async () => {
-    const name = prompt('分类名称');
+    const name = await uiPrompt('分类名称');
     if (!name) return;
     try {
       const data = await api('/api/admin/categories', { method: 'POST', body: { name } });
@@ -243,7 +447,7 @@
   document.getElementById('rename-cat')?.addEventListener('click', async () => {
     const cat = catById(currentCat);
     if (!cat) return;
-    const name = prompt('分类名称', cat.name);
+    const name = await uiPrompt('分类名称', cat.name);
     if (!name) return;
     try {
       const data = await api('/api/admin/categories/' + cat.id, { method: 'PATCH', body: { name } });
@@ -257,7 +461,7 @@
   document.getElementById('del-cat')?.addEventListener('click', async () => {
     const cat = catById(currentCat);
     if (!cat) return;
-    if (!confirm(`删除分类「${cat.name}」及其 ${cat.items.length} 条链接？`)) return;
+    if (!(await uiConfirm(`删除分类「${cat.name}」及其 ${cat.items.length} 条链接？`, { danger: true }))) return;
     try {
       const data = await api('/api/admin/categories/' + cat.id + '/delete', { method: 'POST', body: {} });
       nav = data.data;
@@ -270,7 +474,7 @@
 
   document.getElementById('bulk-del')?.addEventListener('click', async () => {
     if (!selected.size) return toast('先勾选链接', 'warn');
-    if (!confirm(`删除 ${selected.size} 条链接？`)) return;
+    if (!(await uiConfirm(`删除 ${selected.size} 条链接？`, { danger: true }))) return;
     try {
       const data = await api('/api/admin/items/bulk-delete', { method: 'POST', body: { ids: [...selected] } });
       nav = data.data;
@@ -283,9 +487,8 @@
 
   document.getElementById('bulk-move')?.addEventListener('click', async () => {
     if (!selected.size) return toast('先勾选链接', 'warn');
-    const names = nav.categories.map((c) => c.name).join('\n');
-    const name = prompt('移动到分类（输入名称）：\n' + names);
-    const cat = nav.categories.find((c) => c.name === name);
+    const targetId = await uiChoose('移动到分类', nav.categories.map((c) => ({ value: c.id, label: c.name })));
+    const cat = nav.categories.find((c) => c.id === targetId);
     if (!cat) return;
     try {
       const data = await api('/api/admin/items/move', { method: 'POST', body: { ids: [...selected], toCategoryId: cat.id } });

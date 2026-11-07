@@ -147,6 +147,29 @@ export function loginPage(error = ''): string {
 </html>`;
 }
 
+const SELECT_CHEVRON = '<svg class="ui-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+export function uiSelect(opts: {
+  name: string;
+  value?: string;
+  options: { value: string; label: string }[];
+  id?: string;
+  className?: string;
+}): string {
+  const value = opts.value ?? '';
+  const current = opts.options.find((o) => o.value === value);
+  const items = opts.options
+    .map(
+      (o) => `<button type="button" class="ui-select-option${o.value === value ? ' selected' : ''}" role="option" aria-selected="${o.value === value}" data-value="${escapeAttr(o.value)}">${escapeHtml(o.label)}</button>`,
+    )
+    .join('');
+  return `<div class="ui-select${opts.className ? ` ${opts.className}` : ''}"${opts.id ? ` id="${escapeAttr(opts.id)}"` : ''}>
+      <input type="hidden" name="${escapeAttr(opts.name)}" value="${escapeAttr(value)}">
+      <button type="button" class="ui-select-btn" aria-haspopup="listbox" aria-expanded="false"><span class="ui-select-label">${escapeHtml(current?.label || '')}</span>${SELECT_CHEVRON}</button>
+      <div class="ui-select-menu" role="listbox" hidden>${items}</div>
+    </div>`;
+}
+
 export function itemForm(opts: {
   csrf: string;
   categories: Category[];
@@ -155,9 +178,21 @@ export function itemForm(opts: {
 }): string {
   const it = opts.item;
   const action = it ? `/admin/items/${encodeURIComponent(it.id)}` : '/admin/items/new';
-  const catOpts = opts.categories
-    .map((c) => `<option value="${escapeAttr(c.id)}" ${c.id === opts.categoryId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`)
-    .join('');
+  const categorySelect = uiSelect({
+    name: 'categoryId',
+    value: opts.categoryId || opts.categories[0]?.id || '',
+    options: opts.categories.map((c) => ({ value: c.id, label: c.name })),
+  });
+  const iconTypeSelect = uiSelect({
+    name: 'iconType',
+    id: 'icon-type',
+    value: it ? it.icon.type : 'favicon',
+    options: [
+      { value: 'favicon', label: '自动 favicon' },
+      { value: 'url', label: '图片 URL' },
+      { value: 'svg', label: '内联 SVG' },
+    ],
+  });
   return `<form class="card" method="post" action="${action}" id="item-form">
     <input type="hidden" name="csrf" value="${escapeAttr(opts.csrf)}">
     <div class="row">
@@ -167,14 +202,8 @@ export function itemForm(opts: {
     <div class="field"><label>标题</label><input type="text" name="title" id="item-title" value="${escapeAttr(it?.title || '')}" required></div>
     <div class="field"><label>描述</label><input type="text" name="description" value="${escapeAttr(it?.description || '')}"></div>
     <div class="row">
-      <div class="field"><label>分类</label><select name="categoryId">${catOpts}</select></div>
-      <div class="field"><label>图标类型</label>
-        <select name="iconType" id="icon-type">
-          <option value="favicon" ${!it || it.icon.type === 'favicon' ? 'selected' : ''}>自动 favicon</option>
-          <option value="url" ${it?.icon.type === 'url' ? 'selected' : ''}>图片 URL</option>
-          <option value="svg" ${it?.icon.type === 'svg' ? 'selected' : ''}>内联 SVG</option>
-        </select>
-      </div>
+      <div class="field"><label>分类</label>${categorySelect}</div>
+      <div class="field"><label>图标类型</label>${iconTypeSelect}</div>
     </div>
     <div class="field"><label>图标值</label><textarea name="iconValue" id="icon-value">${escapeHtml(it?.icon.value || '')}</textarea></div>
     <div class="field"><label><input type="checkbox" name="visible" ${it?.visible !== false ? 'checked' : ''}> 前台显示</label></div>

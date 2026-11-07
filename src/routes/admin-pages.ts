@@ -11,7 +11,7 @@ import {
   recordLoginFail,
   tokensEqual,
 } from '../lib/auth';
-import { adminLayout, itemForm, loginPage } from '../lib/html';
+import { adminLayout, itemForm, loginPage, uiSelect } from '../lib/html';
 import { findItem, getNavData, listHistory, restoreHistory, saveNav } from '../lib/store';
 import { parseIcon } from '../lib/validate';
 import { isHttpUrl, escapeAttr, escapeHtml } from '../lib/sanitize';
@@ -76,7 +76,7 @@ adminPages.get('/admin', async (c) => {
       <button type="button" id="bulk-move" class="secondary">移动所选</button>
       <button type="button" id="bulk-del" class="danger">删除所选</button>
     </div>
-    <div class="mobile-only field"><label>分类</label><select id="mobile-cat"></select></div>
+    <div class="mobile-only field"><label>分类</label><div class="ui-select" id="mobile-cat"></div></div>
     <div class="layout" id="workspace">
       <div class="card cats desktop-only"><ul class="cat-list" id="cat-box"></ul></div>
       <div class="card"><ul class="item-list" id="item-box"></ul></div>
@@ -126,9 +126,14 @@ adminPages.get('/admin/items', async (c) => {
       </tr>`,
     )
     .join('');
-  const opts = nav.categories.map((c) => `<option value="${escapeAttr(c.id)}" ${c.id === filter ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+  const categoryFilter = uiSelect({
+    name: 'category',
+    value: filter,
+    options: [{ value: '', label: '全部分类' }, ...nav.categories.map((c) => ({ value: c.id, label: c.name }))],
+    className: 'filter-select',
+  });
   const body = `<form class="toolbar" method="get" action="/admin/items">
-      <select name="category" style="max-width:200px"><option value="">全部分类</option>${opts}</select>
+      ${categoryFilter}
       <input type="search" name="q" value="${escapeAttr(c.req.query('q') || '')}" placeholder="搜索" style="max-width:240px">
       <button type="submit" class="secondary">筛选</button>
       <a class="btn" href="/admin/items/new">新建</a>
@@ -315,7 +320,7 @@ adminPages.get('/admin/history', async (c) => {
         <td>${h.categories ?? '-'} / ${h.items ?? '-'}</td>
         <td>${escapeHtml(diff || '—')}</td>
         <td>
-          <form method="post" action="/admin/history/restore" onsubmit="return confirm('确认回滚到该版本？当前数据会先备份。')">
+          <form method="post" action="/admin/history/restore" data-confirm="确认回滚到该版本？当前数据会先备份。">
             <input type="hidden" name="csrf" value="${escapeAttr(csrf)}">
             <input type="hidden" name="key" value="${escapeAttr(h.key)}">
             <button type="submit" class="secondary">回滚</button>

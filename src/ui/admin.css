@@ -81,6 +81,49 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 }
 .icon-btn svg { display: block; }
 
+.ui-select { position: relative; }
+.ui-select-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; text-align: left;
+}
+.ui-select-btn:hover, .ui-select.open .ui-select-btn { border-color: var(--accent); }
+.ui-select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-chevron { flex: 0 0 auto; color: var(--muted); transition: transform .12s ease; }
+.ui-select.open .ui-chevron { transform: rotate(180deg); }
+.ui-select-menu {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px);
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(27, 21, 36, .16); padding: 4px; max-height: 260px; overflow: auto;
+}
+.ui-select-menu[hidden] { display: none; }
+.ui-select-option {
+  display: block; width: 100%; text-align: left; background: transparent; color: var(--ink);
+  border: 0; border-radius: 6px; padding: 8px 10px; cursor: pointer; white-space: normal;
+}
+.ui-select-option:hover, .ui-select-option.selected { background: #efe8f8; color: var(--accent-2); }
+.ui-select.filter-select { width: 200px; flex: 0 0 auto; }
+
+.ui-overlay {
+  position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(27, 21, 36, .45);
+}
+.ui-dialog {
+  width: 380px; max-width: 92vw; padding: 18px;
+  box-shadow: 0 20px 48px rgba(27, 21, 36, .24);
+}
+.ui-dialog h3 { margin: 0 0 12px; font-size: 16px; }
+.ui-message { margin: 0 0 16px; line-height: 1.5; }
+.ui-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.ui-options { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
+.ui-option {
+  display: block; width: 100%; text-align: left; background: transparent; color: var(--ink);
+  border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; cursor: pointer;
+}
+.ui-option:hover, .ui-option:focus-visible {
+  background: #efe8f8; color: var(--accent-2); border-color: var(--line); outline: none;
+}
+
 .msg { padding: 10px 12px; border-radius: 8px; margin: 10px 0; }
 .msg.ok { background: #e8f7ee; color: var(--ok); }
 .msg.err { background: #fde8e6; color: var(--danger); }
