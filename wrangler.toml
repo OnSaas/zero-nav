@@ -1,11 +1,11 @@
 name = "zero-nav"
-account_id = "22788d96116325ff531105e98c23bc95"
+account_id = "YOUR_ACCOUNT_ID"
 main = "src/index.ts"
-compatibility_date = "2025-11-20"
+compatibility_date = "2026-01-15"
 
 [[kv_namespaces]]
 binding = "BOOKMARKS_KV"
-id = "bb118ee538a04aafbd60995912677f8c"
+id = "YOUR_KV_NAMESPACE_ID"
 
 [[rules]]
 type = "Text"
@@ -15,12 +15,12 @@ fallthrough = true
 [env.production]
 name = "zero-nav"
 main = "src/index.ts"
-compatibility_date = "2025-11-20"
-account_id = "22788d96116325ff531105e98c23bc95"
+compatibility_date = "2026-01-15"
+account_id = "YOUR_ACCOUNT_ID"
 
 [[env.production.kv_namespaces]]
 binding = "BOOKMARKS_KV"
-id = "bb118ee538a04aafbd60995912677f8c"
+id = "YOUR_KV_NAMESPACE_ID"
 
 [[env.production.rules]]
 type = "Text"
