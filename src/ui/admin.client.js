@@ -103,7 +103,7 @@
           (c) => `<li class="cat-item ${c.id === currentCat ? 'active' : ''} ${c.visible ? '' : 'hidden-row'}" draggable="true" data-id="${c.id}">
             <span class="grow"><span class="title">${escapeHtml(c.name)}</span>
             <div class="url">${c.items.length} 条${c.visible ? '' : ' · 隐藏'}</div></span>
-            <button class="ghost" data-act="toggle-cat" title="显隐">${c.visible ? '显' : '隐'}</button>
+            <button class="ghost icon-btn" data-act="toggle-cat" title="${c.visible ? '隐藏' : '显示'}" aria-label="${c.visible ? '隐藏' : '显示'}">${icon(c.visible ? 'eye' : 'eye-off')}</button>
           </li>`,
         )
         .join('');
@@ -135,9 +135,9 @@
             ${icon}
             <span class="grow"><span class="title">${escapeHtml(it.title)}</span>
             <div class="url">${escapeHtml(it.url)}</div></span>
-            <button class="ghost" data-act="toggle-item">${it.visible ? '显' : '隐'}</button>
-            <a class="btn ghost" href="/admin/items/${encodeURIComponent(it.id)}">改</a>
-            <button class="danger" data-act="del-item">删</button>
+            <button class="ghost icon-btn" data-act="toggle-item" title="${it.visible ? '隐藏' : '显示'}" aria-label="${it.visible ? '隐藏' : '显示'}">${icon(it.visible ? 'eye' : 'eye-off')}</button>
+            <a class="btn ghost icon-btn" href="/admin/items/${encodeURIComponent(it.id)}" title="编辑" aria-label="编辑">${icon('pencil')}</a>
+            <button class="danger icon-btn" data-act="del-item" title="删除" aria-label="删除">${icon('trash')}</button>
           </li>`;
         })
         .join('') || '<li class="muted" style="padding:12px">这个分类还没有链接</li>';
@@ -154,6 +154,17 @@
   }
   function escapeAttr(s) {
     return escapeHtml(s);
+  }
+
+  function icon(name) {
+    const attrs = 'viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+    const paths = {
+      eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+      'eye-off': '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+      pencil: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+      trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>',
+    };
+    return `<svg ${attrs}>${paths[name] || ''}</svg>`;
   }
 
   catBox?.addEventListener('click', async (e) => {

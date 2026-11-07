@@ -122,7 +122,7 @@ adminPages.get('/admin/items', async (c) => {
         <td><a href="${escapeAttr(it.url)}" target="_blank" rel="noopener">${escapeHtml(it.url)}</a></td>
         <td>${escapeHtml(cat.name)}</td>
         <td>${it.visible ? '显示' : '隐藏'}</td>
-        <td><a href="/admin/items/${encodeURIComponent(it.id)}">编辑</a></td>
+        <td><a class="btn ghost icon-btn" href="/admin/items/${encodeURIComponent(it.id)}" title="编辑" aria-label="编辑"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></a></td>
       </tr>`,
     )
     .join('');

@@ -68,6 +68,12 @@ button.danger, .btn.danger { background: var(--danger); }
 button.ghost, .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
 button:disabled { opacity: .6; cursor: not-allowed; }
 
+.icon-btn {
+  width: 32px; height: 32px; padding: 0; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.icon-btn svg { display: block; }
+
 .msg { padding: 10px 12px; border-radius: 8px; margin: 10px 0; }
 .msg.ok { background: #e8f7ee; color: var(--ok); }
 .msg.err { background: #fde8e6; color: var(--danger); }
