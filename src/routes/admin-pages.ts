@@ -75,7 +75,7 @@ adminPages.get('/admin', async (c) => {
     <div id="workspace">
       <div class="card"><ul class="item-list" id="item-box"></ul></div>
     </div>`;
-  return c.html(adminLayout({ title: '工作台', csrf, active: 'dash', nav, body }));
+  return c.html(adminLayout({ title: '首页', csrf, active: 'dash', nav, body }));
 });
 
 adminPages.get('/admin/categories', (c) => c.redirect('/admin'));

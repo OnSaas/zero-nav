@@ -55,6 +55,24 @@ export function renderPublicPage(nav: NavData): string {
 
 type NavKey = 'dash' | 'items' | 'settings';
 
+function formatUpdatedAt(raw: string): string {
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value || '';
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return `${get('year')}-${get('month')}-${get('day')} ${hour}:${get('minute')}`;
+}
+
 export function adminLayout(opts: {
   title: string;
   csrf: string;
@@ -62,7 +80,8 @@ export function adminLayout(opts: {
   nav?: NavData;
   body: string;
 }): string {
-  const s = opts.nav ? statsOf(opts.nav) : null;
+  const s = opts.nav && opts.active === 'dash' ? statsOf(opts.nav) : null;
+  const updatedAt = opts.nav?.updatedAt || '';
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -76,7 +95,7 @@ export function adminLayout(opts: {
   <header class="topbar">
     <div class="brand">zero-nav 后台</div>
     <nav>
-      <a href="/admin" class="${opts.active === 'dash' ? 'active' : ''}">工作台</a>
+      <a href="/admin" class="${opts.active === 'dash' ? 'active' : ''}">首页</a>
       <a href="/admin/items" class="${opts.active === 'items' ? 'active' : ''}">链接</a>
       <a href="/admin/settings" class="${opts.active === 'settings' ? 'active' : ''}">设置</a>
     </nav>
@@ -92,7 +111,7 @@ export function adminLayout(opts: {
     ${s ? `<div class="cards">
       <div class="card"><div class="n">${s.items}</div><div class="l">链接</div></div>
       <div class="card"><div class="n">${s.hiddenItems}</div><div class="l">隐藏条数</div></div>
-      <div class="card"><div class="n" style="font-size:14px;line-height:1.4">${escapeHtml(opts.nav?.updatedAt || '')}</div><div class="l">上次更新</div></div>
+      <div class="card"><div class="n" style="font-size:14px;line-height:1.4"><time datetime="${escapeAttr(updatedAt)}" title="${escapeAttr(updatedAt)}">${escapeHtml(formatUpdatedAt(updatedAt))}</time></div><div class="l">上次更新</div></div>
     </div>` : ''}
     ${opts.body}
   </div>
