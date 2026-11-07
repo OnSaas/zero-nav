@@ -26,31 +26,20 @@ export type Item = {
   visible: boolean;
 };
 
-export type Category = {
-  id: string;
-  name: string;
-  slug?: string;
-  icon?: string;
-  order: number;
-  visible: boolean;
-  items: Item[];
-};
-
 export type SiteSettings = {
   title: string;
   headerText: string;
   footerText: string;
   themeColor: string;
   showDescription: boolean;
-  showCategoryTitle: boolean;
 };
 
 export type NavData = {
-  v: 1;
+  v: 2;
   rev: number;
   updatedAt: string;
   site: SiteSettings;
-  categories: Category[];
+  items: Item[];
 };
 
 export type SessionRecord = {
@@ -115,7 +104,7 @@ export const SVG_MAX_BYTES = 8192;
 
 export function defaultNavData(): NavData {
   return {
-    v: 1,
+    v: 2,
     rev: 0,
     updatedAt: new Date().toISOString(),
     site: {
@@ -124,24 +113,19 @@ export function defaultNavData(): NavData {
       footerText: 'Powered by zero-nav',
       themeColor: '#774cb2',
       showDescription: false,
-      showCategoryTitle: true,
     },
-    categories: [],
+    items: [],
   };
 }
 
-export function newId(prefix: 'cat' | 'item'): string {
+export function newId(): string {
   const raw = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-  return `${prefix}_${raw}`;
+  return `item_${raw}`;
 }
 
 export function statsOf(nav: NavData) {
-  const categories = nav.categories.length;
-  const items = nav.categories.reduce((n, c) => n + c.items.length, 0);
-  const hiddenCategories = nav.categories.filter((c) => !c.visible).length;
-  const hiddenItems = nav.categories.reduce(
-    (n, c) => n + c.items.filter((i) => !i.visible).length,
-    0,
-  );
-  return { categories, items, hiddenCategories, hiddenItems };
+  return {
+    items: nav.items.length,
+    hiddenItems: nav.items.filter((i) => !i.visible).length,
+  };
 }

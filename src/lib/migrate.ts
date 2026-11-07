@@ -1,8 +1,8 @@
-import type { Category, Item, LegacySiteData, NavData, YamlConfig } from '../types';
+import type { Item, LegacySiteData, NavData, YamlConfig, YamlSite } from '../types';
 import { defaultNavData, newId } from '../types';
 import { faviconUrlFor, sanitizeSvg } from './sanitize';
 
-function itemFromSite(
+export function itemFromSite(
   title: string,
   url: string,
   description: string,
@@ -11,7 +11,7 @@ function itemFromSite(
 ): Item {
   const svg = iconRaw ? sanitizeSvg(iconRaw) : null;
   return {
-    id: newId('item'),
+    id: newId(),
     title: title || url,
     url,
     description: description || '',
@@ -24,27 +24,13 @@ function itemFromSite(
 }
 
 export function fromLegacyBookmarks(data: LegacySiteData): NavData {
-  const groups = new Map<string, NonNullable<LegacySiteData['bookmarks']>>();
-  for (const b of data.bookmarks || []) {
-    if (!b?.url) continue;
-    const tag = (b.tags && b.tags[0]) || '未分类';
-    const list = groups.get(tag) || [];
-    list.push(b);
-    groups.set(tag, list);
-  }
+  const ordered = (data.bookmarks || [])
+    .map((b, i) => ({ b, order: b.order ?? i }))
+    .filter(({ b }) => !!b?.url)
+    .sort((a, b) => a.order - b.order)
+    .map(({ b }) => b);
 
-  let order = 0;
-  const categories: Category[] = [];
-  for (const [name, bookmarks] of groups) {
-    const sorted = [...bookmarks].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    categories.push({
-      id: newId('cat'),
-      name,
-      order: order++,
-      visible: true,
-      items: sorted.map((b, i) => itemFromSite(b.title, b.url, '', undefined, i)),
-    });
-  }
+  const items = ordered.map((b, i) => itemFromSite(b.title, b.url, '', undefined, i));
 
   const header = data.meta?.customElements?.headerText || '在线服务';
   const footer = data.meta?.customElements?.footerText || 'Powered by zero-nav';
@@ -58,31 +44,34 @@ export function fromLegacyBookmarks(data: LegacySiteData): NavData {
       headerText: header,
       footerText: footer,
     },
-    categories,
+    items,
   };
 }
 
+export function itemsFromSites(sites: YamlSite[]): Item[] {
+  const items: Item[] = [];
+  for (const site of sites) {
+    if (!site?.url) continue;
+    items.push(
+      itemFromSite(site.title || '', site.url, site.description || '', site.icon, items.length),
+    );
+  }
+  return items;
+}
+
 export function fromYamlConfig(data: YamlConfig): NavData {
-  const categories: Category[] = [];
-  (data.categories || []).forEach((cat, ci) => {
-    const name = (cat.name || '').trim();
-    if (!name) return;
-    const sites = cat.sites || [];
-    const icon = cat.icon ? sanitizeSvg(cat.icon) || undefined : undefined;
-    categories.push({
-      id: newId('cat'),
-      name,
-      icon,
-      order: ci,
-      visible: true,
-      items: sites
-        .filter((s) => s?.url)
-        .map((s, i) => itemFromSite(s.title || '', s.url || '', s.description || '', s.icon, i)),
-    });
+  const sites: YamlSite[] = [];
+  (data.categories || []).forEach((cat) => {
+    for (const site of cat.sites || []) sites.push(site);
   });
 
   const base = defaultNavData();
-  return { ...base, categories };
+  return { ...base, items: itemsFromSites(sites) };
+}
+
+export function fromFlatYamlSites(sites: YamlSite[]): NavData {
+  const base = defaultNavData();
+  return { ...base, items: itemsFromSites(sites) };
 }
 
 export function looksLikeLegacyBookmarks(raw: unknown): raw is LegacySiteData {
@@ -96,9 +85,16 @@ export function looksLikeYamlConfig(raw: unknown): raw is YamlConfig {
   return Array.isArray(cats[0]?.sites) || (!('items' in (cats[0] || {})) && 'name' in (cats[0] || {}));
 }
 
+export function looksLikeFlatYamlSites(raw: unknown): raw is { sites: YamlSite[] } {
+  if (!raw || typeof raw !== 'object') return false;
+  return Array.isArray((raw as { sites?: unknown }).sites);
+}
+
 export function looksLikeNavData(raw: unknown): boolean {
   if (!raw || typeof raw !== 'object') return false;
-  const cats = (raw as { categories?: unknown }).categories;
+  const obj = raw as Record<string, unknown>;
+  if (Array.isArray(obj.items)) return true;
+  const cats = obj.categories;
   if (!Array.isArray(cats)) return false;
   if (cats.length === 0) return true;
   return Array.isArray((cats[0] as { items?: unknown })?.items);

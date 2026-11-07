@@ -1,5 +1,5 @@
 /**
- * Convert config.yml or a site:bookmarks JSON file into nav:data JSON.
+ * Convert config.yml or a site:bookmarks JSON file into the flat nav:data JSON.
  *
  *   npx tsx scripts/migrate-from-zero-nav.ts
  *   npx tsx scripts/migrate-from-zero-nav.ts config.yml
@@ -11,7 +11,15 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { fromLegacyBookmarks, fromYamlConfig, looksLikeLegacyBookmarks, looksLikeNavData, looksLikeYamlConfig } from '../src/lib/migrate';
+import {
+  fromFlatYamlSites,
+  fromLegacyBookmarks,
+  fromYamlConfig,
+  looksLikeFlatYamlSites,
+  looksLikeLegacyBookmarks,
+  looksLikeNavData,
+  looksLikeYamlConfig,
+} from '../src/lib/migrate';
 import { parseNavData } from '../src/lib/validate';
 import type { NavData } from '../src/types';
 
@@ -23,15 +31,19 @@ const ext = extname(input).toLowerCase();
 let nav: NavData;
 if (ext === '.yml' || ext === '.yaml') {
   const raw = parseYaml(text);
-  nav = looksLikeNavData(raw) ? parseNavData(raw) : fromYamlConfig(raw);
+  if (looksLikeNavData(raw)) nav = parseNavData(raw);
+  else if (looksLikeYamlConfig(raw)) nav = fromYamlConfig(raw);
+  else if (looksLikeFlatYamlSites(raw)) nav = fromFlatYamlSites(raw.sites);
+  else nav = parseNavData(raw);
 } else {
   const raw = JSON.parse(text) as unknown;
   if (looksLikeLegacyBookmarks(raw)) nav = fromLegacyBookmarks(raw);
-  else if (looksLikeYamlConfig(raw) && !looksLikeNavData(raw)) nav = fromYamlConfig(raw);
+  else if (looksLikeNavData(raw)) nav = parseNavData(raw);
+  else if (looksLikeYamlConfig(raw)) nav = fromYamlConfig(raw);
+  else if (looksLikeFlatYamlSites(raw)) nav = fromFlatYamlSites(raw.sites);
   else nav = parseNavData(raw);
 }
 
 writeFileSync(output, JSON.stringify(nav, null, 2));
-const items = nav.categories.reduce((n, c) => n + c.items.length, 0);
 console.log(`Wrote ${output}`);
-console.log(`categories=${nav.categories.length} items=${items}`);
+console.log(`v=${nav.v} items=${nav.items.length}`);

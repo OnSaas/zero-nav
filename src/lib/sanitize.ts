@@ -51,12 +51,3 @@ export function isHttpUrl(url: string): boolean {
 export function faviconUrlFor(pageUrl: string): string {
   return `https://www.google.com/s2/favicons?sz=64&domain_url=${encodeURIComponent(pageUrl)}`;
 }
-
-export function slugify(name: string): string {
-  const s = name
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\u4e00-\u9fff-]/g, '');
-  return s || 'cat';
-}

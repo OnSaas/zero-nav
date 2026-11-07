@@ -1,4 +1,4 @@
-import type { NavData } from '../types';
+import type { Item, NavData } from '../types';
 import { DATA_KEY, HISTORY_PREFIX, HISTORY_TTL, LEGACY_KEY, defaultNavData, statsOf } from '../types';
 import { parseNavData } from './validate';
 import { fromLegacyBookmarks, looksLikeLegacyBookmarks } from './migrate';
@@ -22,7 +22,6 @@ export class PayloadTooLargeError extends Error {
 export type HistoryEntry = {
   key: string;
   updatedAt?: string;
-  categories?: number;
   items?: number;
 };
 
@@ -55,7 +54,6 @@ export async function backupNav(kv: KVNamespace, data: NavData): Promise<string>
     expirationTtl: HISTORY_TTL,
     metadata: {
       updatedAt: data.updatedAt,
-      categories: s.categories,
       items: s.items,
     },
   });
@@ -79,7 +77,7 @@ export async function saveNav(kv: KVNamespace, data: NavData): Promise<NavData> 
 
   const next: NavData = {
     ...data,
-    v: 1,
+    v: 2,
     rev: currentRev + 1,
     updatedAt: new Date().toISOString(),
   };
@@ -88,8 +86,8 @@ export async function saveNav(kv: KVNamespace, data: NavData): Promise<NavData> 
   const bytes = new TextEncoder().encode(serialized).length;
   if (bytes > MAX_NAV_BYTES) throw new PayloadTooLargeError(bytes);
 
-  if (storedRaw) {
-    await backupNav(kv, stored || (storedRaw as NavData));
+  if (stored) {
+    await backupNav(kv, stored);
   }
   await kv.put(DATA_KEY, serialized);
   return next;
@@ -105,7 +103,6 @@ export async function listHistory(kv: KVNamespace): Promise<HistoryEntry[]> {
       entries.push({
         key: k.name,
         updatedAt: typeof meta.updatedAt === 'string' ? meta.updatedAt : undefined,
-        categories: typeof meta.categories === 'number' ? meta.categories : undefined,
         items: typeof meta.items === 'number' ? meta.items : undefined,
       });
     }
@@ -127,40 +124,24 @@ export async function restoreHistory(kv: KVNamespace, key: string): Promise<NavD
 }
 
 export function sortNav(nav: NavData): NavData {
-  const categories = [...nav.categories]
-    .sort((a, b) => a.order - b.order)
-    .map((c) => ({
-      ...c,
-      items: [...c.items].sort((a, b) => a.order - b.order),
-    }));
-  return { ...nav, categories };
+  return {
+    ...nav,
+    items: [...nav.items].sort((a, b) => a.order - b.order),
+  };
 }
 
 export function publicNav(nav: NavData): NavData {
   const sorted = sortNav(nav);
   return {
     ...sorted,
-    categories: sorted.categories
-      .filter((c) => c.visible)
-      .map((c) => ({
-        ...c,
-        items: c.items.filter((i) => i.visible),
-      }))
-      // Empty categories (no visible items) are hidden on the public homepage; admin still sees them.
-      .filter((c) => c.items.length > 0),
+    items: sorted.items.filter((i) => i.visible),
   };
 }
 
-export function findCategory(nav: NavData, id: string) {
-  return nav.categories.find((c) => c.id === id);
-}
-
-export function findItem(nav: NavData, id: string) {
-  for (const category of nav.categories) {
-    const index = category.items.findIndex((i) => i.id === id);
-    if (index >= 0) return { category, item: category.items[index], index };
-  }
-  return null;
+export function findItem(nav: NavData, id: string): { item: Item; index: number } | null {
+  const index = nav.items.findIndex((i) => i.id === id);
+  if (index < 0) return null;
+  return { item: nav.items[index], index };
 }
 
 export function reindex(list: { order: number }[]) {

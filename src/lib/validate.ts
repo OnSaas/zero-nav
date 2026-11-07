@@ -1,4 +1,4 @@
-import type { Category, Item, ItemIcon, NavData, SiteSettings } from '../types';
+import type { Item, ItemIcon, NavData, SiteSettings } from '../types';
 import { defaultNavData, newId } from '../types';
 import { faviconUrlFor, isHttpUrl, sanitizeSvg } from './sanitize';
 
@@ -48,7 +48,7 @@ export function parseItem(raw: unknown, index: number): Item {
   if (!title) throw new ValidateError('链接标题不能为空');
   if (!isHttpUrl(url)) throw new ValidateError(`链接 URL 必须是 http(s)：${url || '(空)'}`);
 
-  const id = asString(obj.id).startsWith('item_') ? asString(obj.id) : newId('item');
+  const id = asString(obj.id).startsWith('item_') ? asString(obj.id) : newId();
   return {
     id,
     title,
@@ -57,27 +57,6 @@ export function parseItem(raw: unknown, index: number): Item {
     icon: parseIcon(obj.icon, url),
     order: asNum(obj.order, index),
     visible: asBool(obj.visible, true),
-  };
-}
-
-export function parseCategory(raw: unknown, index: number): Category {
-  const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const name = asString(obj.name).trim();
-  if (!name) throw new ValidateError('分类名称不能为空');
-  const itemsRaw = Array.isArray(obj.items) ? obj.items : [];
-  const id = asString(obj.id).startsWith('cat_') ? asString(obj.id) : newId('cat');
-  const icon = asString(obj.icon);
-  if (icon && !sanitizeSvg(icon) && !isHttpUrl(icon)) {
-    throw new ValidateError(`分类图标无效：${name}`);
-  }
-  return {
-    id,
-    name,
-    slug: asString(obj.slug) || undefined,
-    icon: icon || undefined,
-    order: asNum(obj.order, index),
-    visible: asBool(obj.visible, true),
-    items: itemsRaw.map((item, i) => parseItem(item, i)),
   };
 }
 
@@ -94,31 +73,58 @@ export function parseSite(raw: unknown): SiteSettings {
     footerText: asString(obj.footerText, fallback.footerText),
     themeColor,
     showDescription: asBool(obj.showDescription, fallback.showDescription),
-    showCategoryTitle: asBool(obj.showCategoryTitle, fallback.showCategoryTitle),
   };
+}
+
+function sortByOrder(raw: unknown[], indexOf: (value: unknown, i: number) => number): unknown[] {
+  return raw
+    .map((value, i) => ({ value, order: indexOf(value, i) }))
+    .sort((a, b) => a.order - b.order)
+    .map((entry) => entry.value);
+}
+
+function legacyItems(categoriesRaw: unknown[]): unknown[] {
+  const categories = sortByOrder(categoriesRaw, (value, i) => {
+    const obj = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+    return asNum(obj.order, i);
+  });
+  const flat: unknown[] = [];
+  for (const category of categories) {
+    const obj = category && typeof category === 'object' ? (category as Record<string, unknown>) : {};
+    const items = Array.isArray(obj.items) ? obj.items : [];
+    flat.push(...sortByOrder(items, (value, i) => {
+      const entry = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+      return asNum(entry.order, i);
+    }));
+  }
+  return flat;
 }
 
 export function parseNavData(raw: unknown): NavData {
   const obj = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const categoriesRaw = Array.isArray(obj.categories) ? obj.categories : [];
+  const flatRaw = Array.isArray(obj.items)
+    ? obj.items
+    : legacyItems(Array.isArray(obj.categories) ? obj.categories : []);
+  const items = flatRaw.map((item, i) => parseItem(item, i));
+  items.forEach((item, i) => {
+    item.order = i;
+  });
   return {
-    v: 1,
+    v: 2,
     rev: asNum(obj.rev, 0),
     updatedAt: asString(obj.updatedAt) || new Date().toISOString(),
     site: parseSite(obj.site),
-    categories: categoriesRaw.map((c, i) => parseCategory(c, i)),
+    items,
   };
 }
 
 export function findDuplicates(nav: NavData, url: string, exceptId?: string): Item[] {
   const target = url.trim().toLowerCase().replace(/\/+$/, '');
   const hits: Item[] = [];
-  for (const cat of nav.categories) {
-    for (const item of cat.items) {
-      if (exceptId && item.id === exceptId) continue;
-      const u = item.url.trim().toLowerCase().replace(/\/+$/, '');
-      if (u === target) hits.push(item);
-    }
+  for (const item of nav.items) {
+    if (exceptId && item.id === exceptId) continue;
+    const u = item.url.trim().toLowerCase().replace(/\/+$/, '');
+    if (u === target) hits.push(item);
   }
   return hits;
 }
