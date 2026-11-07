@@ -11,8 +11,8 @@ import {
   recordLoginFail,
   tokensEqual,
 } from '../lib/auth';
-import { adminLayout, itemForm, loginPage, uiSelect } from '../lib/html';
-import { findItem, getNavData, listHistory, restoreHistory, saveNav } from '../lib/store';
+import { adminLayout, itemForm, loginPage } from '../lib/html';
+import { findItem, getNavData, listHistory, restoreHistory, saveNav, sortNav } from '../lib/store';
 import { parseIcon } from '../lib/validate';
 import { isHttpUrl, escapeAttr, escapeHtml } from '../lib/sanitize';
 import { mergeNav, payloadToNav } from '../lib/import-export';
@@ -70,91 +70,47 @@ adminPages.get('/admin', async (c) => {
     <div class="toolbar">
       <input type="search" id="item-search" placeholder="搜索标题 / URL / 描述" style="max-width:280px">
       <a class="btn" href="/admin/items/new">新建链接</a>
-      <button type="button" id="add-cat" class="secondary">新建分类</button>
-      <button type="button" id="rename-cat" class="ghost">重命名分类</button>
-      <button type="button" id="del-cat" class="danger">删除分类</button>
-      <button type="button" id="bulk-move" class="secondary">移动所选</button>
       <button type="button" id="bulk-del" class="danger">删除所选</button>
     </div>
-    <div class="mobile-only field"><label>分类</label><div class="ui-select" id="mobile-cat"></div></div>
-    <div class="layout" id="workspace">
-      <div class="card cats desktop-only"><ul class="cat-list" id="cat-box"></ul></div>
+    <div id="workspace">
       <div class="card"><ul class="item-list" id="item-box"></ul></div>
     </div>`;
   return c.html(adminLayout({ title: '工作台', csrf, active: 'dash', nav, body }));
 });
 
-adminPages.get('/admin/categories', async (c) => {
-  const nav = await getNavData(c.env.BOOKMARKS_KV);
-  const csrf = c.get('csrf');
-  const rows = nav.categories
-    .slice()
-    .sort((a, b) => a.order - b.order)
-    .map(
-      (cat) => `<tr>
-        <td>${escapeHtml(cat.name)}</td>
-        <td>${cat.items.length}</td>
-        <td>${cat.visible ? '显示' : '隐藏'}</td>
-        <td><a href="/admin?cat=${encodeURIComponent(cat.id)}">管理链接</a></td>
-      </tr>`,
-    )
-    .join('');
-  const body = `<div class="card"><p class="muted">拖拽排序请到工作台。这里是分类总览。</p>
-    <table><thead><tr><th>分类</th><th>链接</th><th>状态</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4">暂无分类</td></tr>'}</tbody></table></div>`;
-  return c.html(adminLayout({ title: '分类', csrf, active: 'categories', nav, body }));
-});
+adminPages.get('/admin/categories', (c) => c.redirect('/admin'));
 
 adminPages.get('/admin/items', async (c) => {
   const nav = await getNavData(c.env.BOOKMARKS_KV);
   const csrf = c.get('csrf');
-  const filter = c.req.query('category') || '';
   const q = (c.req.query('q') || '').toLowerCase();
-  const rows = nav.categories
-    .flatMap((cat) => cat.items.map((it) => ({ cat, it })))
-    .filter(({ cat, it }) => {
-      if (filter && cat.id !== filter) return false;
+  const rows = sortNav(nav)
+    .items.filter((it) => {
       if (q && ![it.title, it.url, it.description].join(' ').toLowerCase().includes(q)) return false;
       return true;
     })
     .map(
-      ({ cat, it }) => `<tr>
+      (it) => `<tr>
         <td>${escapeHtml(it.title)}</td>
         <td><a href="${escapeAttr(it.url)}" target="_blank" rel="noopener">${escapeHtml(it.url)}</a></td>
-        <td>${escapeHtml(cat.name)}</td>
         <td>${it.visible ? '显示' : '隐藏'}</td>
         <td><a class="btn ghost icon-btn" href="/admin/items/${encodeURIComponent(it.id)}" title="编辑" aria-label="编辑"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></a></td>
       </tr>`,
     )
     .join('');
-  const categoryFilter = uiSelect({
-    name: 'category',
-    value: filter,
-    options: [{ value: '', label: '全部分类' }, ...nav.categories.map((c) => ({ value: c.id, label: c.name }))],
-    className: 'filter-select',
-  });
   const body = `<form class="toolbar" method="get" action="/admin/items">
-      ${categoryFilter}
       <input type="search" name="q" value="${escapeAttr(c.req.query('q') || '')}" placeholder="搜索" style="max-width:240px">
       <button type="submit" class="secondary">筛选</button>
       <a class="btn" href="/admin/items/new">新建</a>
     </form>
-    <div class="card"><table><thead><tr><th>标题</th><th>URL</th><th>分类</th><th>状态</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="5">没有匹配的链接</td></tr>'}</tbody></table></div>`;
+    <div class="card"><table><thead><tr><th>标题</th><th>URL</th><th>状态</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4">没有匹配的链接</td></tr>'}</tbody></table></div>`;
   return c.html(adminLayout({ title: '链接', csrf, active: 'items', nav, body }));
 });
 
 adminPages.get('/admin/items/new', async (c) => {
   const nav = await getNavData(c.env.BOOKMARKS_KV);
-  if (!nav.categories.length) {
-    return c.html(adminLayout({
-      title: '新建链接',
-      csrf: c.get('csrf'),
-      active: 'items',
-      nav,
-      body: '<div class="msg warn">请先在工作台新建一个分类。</div>',
-    }));
-  }
-  const body = itemForm({ csrf: c.get('csrf'), categories: nav.categories, categoryId: c.req.query('category') || nav.categories[0].id });
+  const body = itemForm({ csrf: c.get('csrf') });
   return c.html(adminLayout({ title: '新建链接', csrf: c.get('csrf'), active: 'items', nav, body }));
 });
 
@@ -162,7 +118,7 @@ adminPages.get('/admin/items/:id', async (c) => {
   const nav = await getNavData(c.env.BOOKMARKS_KV);
   const found = findItem(nav, c.req.param('id'));
   if (!found) return c.text('Not found', 404);
-  const body = itemForm({ csrf: c.get('csrf'), categories: nav.categories, item: found.item, categoryId: found.category.id });
+  const body = itemForm({ csrf: c.get('csrf'), item: found.item });
   return c.html(adminLayout({ title: '编辑链接', csrf: c.get('csrf'), active: 'items', nav, body }));
 });
 
@@ -170,21 +126,19 @@ adminPages.post('/admin/items/new', async (c) => {
   const body = await c.req.parseBody();
   if (!(await csrfFromForm(c, body))) return c.text('CSRF', 403);
   const nav = await getNavData(c.env.BOOKMARKS_KV);
-  const cat = nav.categories.find((x) => x.id === String(body.categoryId));
-  if (!cat) return c.text('分类不存在', 400);
   const url = String(body.url || '').trim();
   if (!isHttpUrl(url)) return c.text('URL 必须是 http(s)', 400);
-  cat.items.push({
-    id: newId('item'),
+  nav.items.push({
+    id: newId(),
     title: String(body.title || '').trim() || url,
     url,
     description: String(body.description || ''),
     icon: parseIcon({ type: String(body.iconType || 'favicon'), value: String(body.iconValue || '') }, url),
-    order: cat.items.length,
+    order: nav.items.length,
     visible: body.visible === 'on',
   });
   await saveNav(c.env.BOOKMARKS_KV, nav);
-  return c.redirect('/admin?cat=' + encodeURIComponent(cat.id));
+  return c.redirect('/admin');
 });
 
 adminPages.post('/admin/items/:id', async (c) => {
@@ -200,17 +154,8 @@ adminPages.post('/admin/items/:id', async (c) => {
   found.item.description = String(body.description || '');
   found.item.visible = body.visible === 'on';
   found.item.icon = parseIcon({ type: String(body.iconType || 'favicon'), value: String(body.iconValue || '') }, url);
-  const destId = String(body.categoryId || found.category.id);
-  if (destId !== found.category.id) {
-    const dest = nav.categories.find((x) => x.id === destId);
-    if (dest) {
-      found.category.items.splice(found.index, 1);
-      found.item.order = dest.items.length;
-      dest.items.push(found.item);
-    }
-  }
   await saveNav(c.env.BOOKMARKS_KV, nav);
-  return c.redirect('/admin?cat=' + encodeURIComponent(destId));
+  return c.redirect('/admin');
 });
 
 adminPages.get('/admin/settings', async (c) => {
@@ -239,7 +184,6 @@ adminPages.get('/admin/settings', async (c) => {
     <div class="field"><label>页脚</label><input name="footerText" value="${escapeAttr(s.footerText)}"></div>
     <div class="field"><label>主题色</label><input type="color" name="themeColor" value="${escapeAttr(s.themeColor)}"></div>
     <div class="field"><label><input type="checkbox" name="showDescription" ${s.showDescription ? 'checked' : ''}> 显示描述</label></div>
-    <div class="field"><label><input type="checkbox" name="showCategoryTitle" ${s.showCategoryTitle ? 'checked' : ''}> 显示分类标题</label></div>
     <button type="submit">保存设置</button>
   </form>
   <div class="card" id="export" style="margin-top:14px">
@@ -269,7 +213,6 @@ adminPages.post('/admin/settings', async (c) => {
     footerText: String(body.footerText || ''),
     themeColor: String(body.themeColor || nav.site.themeColor),
     showDescription: body.showDescription === 'on',
-    showCategoryTitle: body.showCategoryTitle === 'on',
   };
   await saveNav(c.env.BOOKMARKS_KV, nav);
   return c.redirect('/admin/settings');
@@ -309,15 +252,11 @@ adminPages.get('/admin/history', async (c) => {
   const now = statsOf(nav);
   const rows = items
     .map((h) => {
-      const catDiff = typeof h.categories === 'number' ? h.categories - now.categories : null;
       const itemDiff = typeof h.items === 'number' ? h.items - now.items : null;
-      const diff = [
-        catDiff !== null ? `分类 ${catDiff >= 0 ? '+' : ''}${catDiff}` : '',
-        itemDiff !== null ? `链接 ${itemDiff >= 0 ? '+' : ''}${itemDiff}` : '',
-      ].filter(Boolean).join(' / ');
+      const diff = itemDiff !== null ? `链接 ${itemDiff >= 0 ? '+' : ''}${itemDiff}` : '';
       return `<tr>
         <td>${escapeHtml(h.updatedAt || h.key.replace('nav:history:', ''))}</td>
-        <td>${h.categories ?? '-'} / ${h.items ?? '-'}</td>
+        <td>${h.items ?? '-'}</td>
         <td>${escapeHtml(diff || '—')}</td>
         <td>
           <form method="post" action="/admin/history/restore" data-confirm="确认回滚到该版本？当前数据会先备份。">
@@ -331,7 +270,7 @@ adminPages.get('/admin/history', async (c) => {
     .join('');
   const body = `<div class="card">
     <p class="muted">写入前自动备份，保留 30 天。回滚会再写一条「回滚前」历史。</p>
-    <table><thead><tr><th>时间</th><th>当时分类 / 链接</th><th>相对现在</th><th></th></tr></thead>
+    <table><thead><tr><th>时间</th><th>当时链接</th><th>相对现在</th><th></th></tr></thead>
     <tbody>${rows || '<tr><td colspan="4">还没有历史</td></tr>'}</tbody></table>
   </div>`;
   return c.html(adminLayout({ title: '历史', csrf, active: 'history', nav, body }));

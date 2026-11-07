@@ -102,7 +102,6 @@ button:disabled { opacity: .6; cursor: not-allowed; }
   border: 0; border-radius: 6px; padding: 8px 10px; cursor: pointer; white-space: normal;
 }
 .ui-select-option:hover, .ui-select-option.selected { background: #efe8f8; color: var(--accent-2); }
-.ui-select.filter-select { width: 200px; flex: 0 0 auto; }
 
 .ui-overlay {
   position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
@@ -115,40 +114,19 @@ button:disabled { opacity: .6; cursor: not-allowed; }
 .ui-dialog h3 { margin: 0 0 12px; font-size: 16px; }
 .ui-message { margin: 0 0 16px; line-height: 1.5; }
 .ui-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.ui-options { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
-.ui-option {
-  display: block; width: 100%; text-align: left; background: transparent; color: var(--ink);
-  border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; cursor: pointer;
-}
-.ui-option:hover, .ui-option:focus-visible {
-  background: #efe8f8; color: var(--accent-2); border-color: var(--line); outline: none;
-}
 
 .msg { padding: 10px 12px; border-radius: 8px; margin: 10px 0; }
 .msg.ok { background: #e8f7ee; color: var(--ok); }
 .msg.err { background: #fde8e6; color: var(--danger); }
 .msg.warn { background: #fef4e6; color: var(--warn); }
 
-.layout { display: grid; grid-template-columns: 260px 1fr; gap: 14px; }
-@media (max-width: 800px) {
-  .layout { grid-template-columns: 1fr; }
-  .cats { order: 0; }
-  .desktop-only { display: none; }
-  .mobile-only { display: block; }
-}
-@media (min-width: 801px) {
-  .mobile-only { display: none; }
-}
-
-.cat-list, .item-list { list-style: none; margin: 0; padding: 0; }
-.cat-item, .item-row {
+.item-list { list-style: none; margin: 0; padding: 0; }
+.item-row {
   display: flex; align-items: center; gap: 8px;
   padding: 10px; border-bottom: 1px solid var(--line);
   background: #fff;
 }
-.cat-item { cursor: grab; }
-.cat-item.active { background: #efe8f8; }
-.cat-item.hidden-row, .item-row.hidden-row { opacity: .55; }
+.item-row.hidden-row { opacity: .55; }
 .grow { flex: 1; min-width: 0; }
 .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .url { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

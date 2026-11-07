@@ -30,8 +30,6 @@
     el.textContent = msg;
   }
 
-  const selectChevron = '<svg class="ui-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-
   function openDialog(title, cancelValue, build) {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
@@ -93,62 +91,6 @@
       actions.append(cancelBtn, okBtn);
       card.appendChild(actions);
       okBtn.focus();
-    });
-  }
-
-  function uiPrompt(title, initialValue) {
-    return openDialog(title, null, (card, finish) => {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = initialValue == null ? '' : initialValue;
-      card.appendChild(input);
-      const actions = document.createElement('div');
-      actions.className = 'ui-actions';
-      const cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.className = 'ghost';
-      cancelBtn.textContent = '取消';
-      cancelBtn.addEventListener('click', () => finish(null));
-      const saveBtn = document.createElement('button');
-      saveBtn.type = 'button';
-      saveBtn.textContent = '保存';
-      saveBtn.addEventListener('click', () => finish(input.value));
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          finish(input.value);
-        }
-      });
-      actions.append(cancelBtn, saveBtn);
-      card.appendChild(actions);
-      input.focus();
-    });
-  }
-
-  function uiChoose(title, options) {
-    return openDialog(title, null, (card, finish) => {
-      const list = document.createElement('div');
-      list.className = 'ui-options';
-      options.forEach((option) => {
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'ui-option';
-        item.textContent = option.label;
-        item.addEventListener('click', () => finish(option.value));
-        list.appendChild(item);
-      });
-      card.appendChild(list);
-      const actions = document.createElement('div');
-      actions.className = 'ui-actions';
-      const cancelBtn = document.createElement('button');
-      cancelBtn.type = 'button';
-      cancelBtn.className = 'ghost';
-      cancelBtn.textContent = '取消';
-      cancelBtn.addEventListener('click', () => finish(null));
-      actions.appendChild(cancelBtn);
-      card.appendChild(actions);
-      const first = list.querySelector('.ui-option');
-      if (first) first.focus();
     });
   }
 
@@ -265,8 +207,7 @@
           method: 'POST',
           body: { format, replace, payload, preview: true },
         });
-        out.textContent = `将新增 ${data.categoriesToAdd} 个分类 / ${data.itemsToAdd} 条链接，重复 ${data.duplicates} 条` +
-          (data.categoryNames?.length ? `\n分类：${data.categoryNames.join('、')}` : '');
+        out.textContent = `将新增 ${data.itemsToAdd} 条链接，重复 ${data.duplicates} 条`;
       } catch (e) {
         out.textContent = e.message;
       }
@@ -277,46 +218,15 @@
   if (!workspace) return;
 
   const raw = document.getElementById('nav-data');
-  let nav = raw ? JSON.parse(raw.textContent) : { categories: [], site: {} };
-  let currentCat = nav.categories[0]?.id || '';
-  const q = new URLSearchParams(location.search);
-  if (q.get('cat') && nav.categories.some((c) => c.id === q.get('cat'))) currentCat = q.get('cat');
+  let nav = raw ? JSON.parse(raw.textContent) : { items: [], site: {} };
 
-  const catBox = document.getElementById('cat-box');
   const itemBox = document.getElementById('item-box');
-  const mobileSelect = document.getElementById('mobile-cat');
   const searchInput = document.getElementById('item-search');
   const selected = new Set();
 
-  function catById(id) {
-    return nav.categories.find((c) => c.id === id);
-  }
-
   function render() {
     const query = (searchInput?.value || '').trim().toLowerCase();
-    if (catBox) {
-      catBox.innerHTML = nav.categories
-        .slice()
-        .sort((a, b) => a.order - b.order)
-        .map(
-          (c) => `<li class="cat-item ${c.id === currentCat ? 'active' : ''} ${c.visible ? '' : 'hidden-row'}" draggable="true" data-id="${c.id}">
-            <span class="grow"><span class="title">${escapeHtml(c.name)}</span>
-            <div class="url">${c.items.length} 条${c.visible ? '' : ' · 隐藏'}</div></span>
-            <button class="ghost icon-btn" data-act="toggle-cat" title="${c.visible ? '隐藏' : '显示'}" aria-label="${c.visible ? '隐藏' : '显示'}">${icon(c.visible ? 'eye' : 'eye-off')}</button>
-          </li>`,
-        )
-        .join('');
-    }
-    if (mobileSelect) {
-      mobileSelect.classList.remove('open');
-      mobileSelect.innerHTML = `<input type="hidden" name="cat" value="${escapeAttr(currentCat)}">
-        <button type="button" class="ui-select-btn" aria-haspopup="listbox" aria-expanded="false"><span class="ui-select-label">${escapeHtml(catById(currentCat)?.name || '')}</span>${selectChevron}</button>
-        <div class="ui-select-menu" role="listbox" hidden>${nav.categories
-          .map((c) => `<button type="button" class="ui-select-option${c.id === currentCat ? ' selected' : ''}" role="option" aria-selected="${c.id === currentCat}" data-value="${escapeAttr(c.id)}">${escapeHtml(c.name)}</button>`)
-          .join('')}</div>`;
-    }
-    const cat = catById(currentCat);
-    const items = (cat?.items || [])
+    const items = (nav.items || [])
       .slice()
       .sort((a, b) => a.order - b.order)
       .filter((it) => {
@@ -342,7 +252,7 @@
             <button class="danger icon-btn" data-act="del-item" title="删除" aria-label="删除">${icon('trash')}</button>
           </li>`;
         })
-        .join('') || '<li class="muted" style="padding:12px">这个分类还没有链接</li>';
+        .join('') || '<li class="muted" style="padding:12px">还没有链接</li>';
     }
     bindDrag();
   }
@@ -369,34 +279,6 @@
     return `<svg ${attrs}>${paths[name] || ''}</svg>`;
   }
 
-  catBox?.addEventListener('click', async (e) => {
-    const li = e.target.closest('.cat-item');
-    if (!li) return;
-    const id = li.dataset.id;
-    if (e.target.dataset.act === 'toggle-cat') {
-      const cat = catById(id);
-      try {
-        const data = await api('/api/admin/categories/' + id, { method: 'PATCH', body: { visible: !cat.visible } });
-        nav = data.data;
-        render();
-      } catch (err) {
-        toast(err.message, 'err');
-      }
-      return;
-    }
-    currentCat = id;
-    selected.clear();
-    render();
-  });
-
-  mobileSelect?.addEventListener('change', () => {
-    const value = mobileSelect.querySelector('input[type="hidden"]')?.value || '';
-    if (!value || value === currentCat) return;
-    currentCat = value;
-    selected.clear();
-    render();
-  });
-
   itemBox?.addEventListener('click', async (e) => {
     const li = e.target.closest('.item-row');
     if (!li) return;
@@ -408,7 +290,7 @@
       return;
     }
     if (act === 'toggle-item') {
-      const found = catById(currentCat)?.items.find((i) => i.id === id);
+      const found = (nav.items || []).find((i) => i.id === id);
       try {
         const data = await api('/api/admin/items/' + id, { method: 'PATCH', body: { visible: !found.visible } });
         nav = data.data;
@@ -431,47 +313,6 @@
     }
   });
 
-  document.getElementById('add-cat')?.addEventListener('click', async () => {
-    const name = await uiPrompt('分类名称');
-    if (!name) return;
-    try {
-      const data = await api('/api/admin/categories', { method: 'POST', body: { name } });
-      nav = data.data;
-      currentCat = data.id || currentCat;
-      render();
-    } catch (e) {
-      toast(e.message, 'err');
-    }
-  });
-
-  document.getElementById('rename-cat')?.addEventListener('click', async () => {
-    const cat = catById(currentCat);
-    if (!cat) return;
-    const name = await uiPrompt('分类名称', cat.name);
-    if (!name) return;
-    try {
-      const data = await api('/api/admin/categories/' + cat.id, { method: 'PATCH', body: { name } });
-      nav = data.data;
-      render();
-    } catch (e) {
-      toast(e.message, 'err');
-    }
-  });
-
-  document.getElementById('del-cat')?.addEventListener('click', async () => {
-    const cat = catById(currentCat);
-    if (!cat) return;
-    if (!(await uiConfirm(`删除分类「${cat.name}」及其 ${cat.items.length} 条链接？`, { danger: true }))) return;
-    try {
-      const data = await api('/api/admin/categories/' + cat.id + '/delete', { method: 'POST', body: {} });
-      nav = data.data;
-      currentCat = nav.categories[0]?.id || '';
-      render();
-    } catch (e) {
-      toast(e.message, 'err');
-    }
-  });
-
   document.getElementById('bulk-del')?.addEventListener('click', async () => {
     if (!selected.size) return toast('先勾选链接', 'warn');
     if (!(await uiConfirm(`删除 ${selected.size} 条链接？`, { danger: true }))) return;
@@ -485,66 +326,9 @@
     }
   });
 
-  document.getElementById('bulk-move')?.addEventListener('click', async () => {
-    if (!selected.size) return toast('先勾选链接', 'warn');
-    const targetId = await uiChoose('移动到分类', nav.categories.map((c) => ({ value: c.id, label: c.name })));
-    const cat = nav.categories.find((c) => c.id === targetId);
-    if (!cat) return;
-    try {
-      const data = await api('/api/admin/items/move', { method: 'POST', body: { ids: [...selected], toCategoryId: cat.id } });
-      nav = data.data;
-      currentCat = cat.id;
-      selected.clear();
-      render();
-    } catch (e) {
-      toast(e.message, 'err');
-    }
-  });
-
   searchInput?.addEventListener('input', render);
 
   function bindDrag() {
-    catBox?.querySelectorAll('.cat-item').forEach((el) => {
-      el.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/cat', el.dataset.id);
-      });
-      el.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        el.classList.add('drag-over');
-      });
-      el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
-      el.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        el.classList.remove('drag-over');
-        const itemId = e.dataTransfer.getData('text/item');
-        const catId = e.dataTransfer.getData('text/cat');
-        if (itemId) {
-          try {
-            const data = await api('/api/admin/items/move', { method: 'POST', body: { ids: [itemId], toCategoryId: el.dataset.id } });
-            nav = data.data;
-            currentCat = el.dataset.id;
-            render();
-          } catch (err) {
-            toast(err.message, 'err');
-          }
-          return;
-        }
-        if (!catId) return;
-        const ids = [...catBox.querySelectorAll('.cat-item')].map((n) => n.dataset.id);
-        const from = ids.indexOf(catId);
-        const to = ids.indexOf(el.dataset.id);
-        if (from < 0 || to < 0) return;
-        ids.splice(from, 1);
-        ids.splice(to, 0, catId);
-        try {
-          const data = await api('/api/admin/categories/reorder', { method: 'POST', body: { ids } });
-          nav = data.data;
-          render();
-        } catch (err) {
-          toast(err.message, 'err');
-        }
-      });
-    });
     itemBox?.querySelectorAll('.item-row').forEach((el) => {
       el.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('text/item', el.dataset.id);
@@ -558,7 +342,7 @@
         e.preventDefault();
         el.classList.remove('drag-over');
         const itemId = e.dataTransfer.getData('text/item');
-        if (!itemId || !currentCat) return;
+        if (!itemId) return;
         const ids = [...itemBox.querySelectorAll('.item-row')].map((n) => n.dataset.id);
         const from = ids.indexOf(itemId);
         const to = ids.indexOf(el.dataset.id);
@@ -566,7 +350,7 @@
         ids.splice(from, 1);
         ids.splice(to, 0, itemId);
         try {
-          const data = await api('/api/admin/items/reorder', { method: 'POST', body: { categoryId: currentCat, ids } });
+          const data = await api('/api/admin/items/reorder', { method: 'POST', body: { ids } });
           nav = data.data;
           render();
         } catch (err) {
