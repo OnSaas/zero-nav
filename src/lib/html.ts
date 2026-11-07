@@ -1,4 +1,4 @@
-import type { Category, Item, ItemIcon, NavData } from '../types';
+import type { Item, ItemIcon, NavData } from '../types';
 import { statsOf } from '../types';
 import { escapeAttr, escapeHtml, sanitizeSvg } from './sanitize';
 import { publicNav, sortNav } from './store';
@@ -16,16 +16,6 @@ export function renderIcon(icon: ItemIcon | undefined, className = 'site-icon'):
   return `<img class="${className}" src="${escapeAttr(icon.value)}" alt="" width="24" height="24">`;
 }
 
-export function renderCategoryIcon(icon: string | undefined): string {
-  if (!icon) return '';
-  const svg = sanitizeSvg(icon);
-  if (svg) return `<span class="category-icon">${svg}</span>`;
-  if (/^https?:\/\//i.test(icon)) {
-    return `<span class="category-icon"><img class="site-icon" src="${escapeAttr(icon)}" alt=""></span>`;
-  }
-  return '';
-}
-
 export function renderPublicPage(nav: NavData): string {
   const data = publicNav(nav);
   const title = escapeHtml(data.site.title || data.site.headerText);
@@ -33,24 +23,16 @@ export function renderPublicPage(nav: NavData): string {
   const footer = escapeHtml(data.site.footerText);
   const theme = escapeAttr(data.site.themeColor || '#774cb2');
 
-  const blocks = data.categories
-    .map((cat) => {
-      const items = cat.items
-        .map((item) => {
-          const desc = data.site.showDescription && item.description
-            ? `<span class="site-description">${escapeHtml(item.description)}</span>`
-            : '';
-          return `<li><a href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">${renderIcon(item.icon)}<span class="site-name">${escapeHtml(item.title)}</span>${desc}</a></li>`;
-        })
-        .join('');
-      const heading = data.site.showCategoryTitle
-        ? `<h2 class="category-title">${renderCategoryIcon(cat.icon)}${escapeHtml(cat.name)}</h2>`
+  const items = data.items
+    .map((item) => {
+      const desc = data.site.showDescription && item.description
+        ? `<span class="site-description">${escapeHtml(item.description)}</span>`
         : '';
-      return `<div class="category-block">${heading}<ul class="category-list">${items}</ul></div>`;
+      return `<li><a href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">${renderIcon(item.icon)}<span class="site-name">${escapeHtml(item.title)}</span>${desc}</a></li>`;
     })
     .join('');
 
-  const body = blocks || '<div class="empty">empty</div>';
+  const body = items ? `<ul class="category-list">${items}</ul>` : '<div class="empty">empty</div>';
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -71,7 +53,7 @@ export function renderPublicPage(nav: NavData): string {
 </html>`;
 }
 
-type NavKey = 'dash' | 'categories' | 'items' | 'settings' | 'history';
+type NavKey = 'dash' | 'items' | 'settings' | 'history';
 
 export function adminLayout(opts: {
   title: string;
@@ -95,7 +77,6 @@ export function adminLayout(opts: {
     <div class="brand">zero-nav 后台</div>
     <nav>
       <a href="/admin" class="${opts.active === 'dash' ? 'active' : ''}">工作台</a>
-      <a href="/admin/categories" class="${opts.active === 'categories' ? 'active' : ''}">分类</a>
       <a href="/admin/items" class="${opts.active === 'items' ? 'active' : ''}">链接</a>
       <a href="/admin/settings" class="${opts.active === 'settings' ? 'active' : ''}">设置</a>
       <a href="/admin/history" class="${opts.active === 'history' ? 'active' : ''}">历史</a>
@@ -110,9 +91,8 @@ export function adminLayout(opts: {
   </header>
   <div class="wrap">
     ${s ? `<div class="cards">
-      <div class="card"><div class="n">${s.categories}</div><div class="l">分类</div></div>
       <div class="card"><div class="n">${s.items}</div><div class="l">链接</div></div>
-      <div class="card"><div class="n">${s.hiddenCategories + s.hiddenItems}</div><div class="l">隐藏条数</div></div>
+      <div class="card"><div class="n">${s.hiddenItems}</div><div class="l">隐藏条数</div></div>
       <div class="card"><div class="n" style="font-size:14px;line-height:1.4">${escapeHtml(opts.nav?.updatedAt || '')}</div><div class="l">上次更新</div></div>
     </div>` : ''}
     ${opts.body}
@@ -170,19 +150,9 @@ export function uiSelect(opts: {
     </div>`;
 }
 
-export function itemForm(opts: {
-  csrf: string;
-  categories: Category[];
-  item?: Item;
-  categoryId?: string;
-}): string {
+export function itemForm(opts: { csrf: string; item?: Item }): string {
   const it = opts.item;
   const action = it ? `/admin/items/${encodeURIComponent(it.id)}` : '/admin/items/new';
-  const categorySelect = uiSelect({
-    name: 'categoryId',
-    value: opts.categoryId || opts.categories[0]?.id || '',
-    options: opts.categories.map((c) => ({ value: c.id, label: c.name })),
-  });
   const iconTypeSelect = uiSelect({
     name: 'iconType',
     id: 'icon-type',
@@ -201,10 +171,7 @@ export function itemForm(opts: {
     </div>
     <div class="field"><label>标题</label><input type="text" name="title" id="item-title" value="${escapeAttr(it?.title || '')}" required></div>
     <div class="field"><label>描述</label><input type="text" name="description" value="${escapeAttr(it?.description || '')}"></div>
-    <div class="row">
-      <div class="field"><label>分类</label>${categorySelect}</div>
-      <div class="field"><label>图标类型</label>${iconTypeSelect}</div>
-    </div>
+    <div class="field"><label>图标类型</label>${iconTypeSelect}</div>
     <div class="field"><label>图标值</label><textarea name="iconValue" id="icon-value">${escapeHtml(it?.icon.value || '')}</textarea></div>
     <div class="field"><label><input type="checkbox" name="visible" ${it?.visible !== false ? 'checked' : ''}> 前台显示</label></div>
     <button type="submit">保存</button>

@@ -80,38 +80,6 @@ h1 {
     text-align: center;
     color: var(--color-text-secondary);
 }
-/* 分类区块 */
-.category-block{
-    margin-top: 30px;
-}
-
-/* 分类标题 */
-.category-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
-}
-.category-icon {
-    margin-right: 10px;
-    width: 24px;
-    height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.category-icon svg {
-    width: 100%;
-    height: 100%;
-}
-.category-title {
-    margin: 0;
-    font-size: 1.2em;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
 /* 网站列表 */
 .category-list {
     display: block;

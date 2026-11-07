@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import type { Bindings, Item, NavData, Variables } from '../types';
-import { newId } from '../types';
 import {
   assertNotLocked,
   clearLoginFail,
@@ -19,7 +18,6 @@ import { exportLegacyYaml, exportYaml, mergeNav, payloadToNav, previewImport } f
 import {
   PayloadTooLargeError,
   RevConflictError,
-  findCategory,
   findItem,
   getNavData,
   listHistory,
@@ -29,7 +27,7 @@ import {
   sortNav,
 } from '../lib/store';
 import { ValidateError, findDuplicates, parseIcon, parseItem, parseNavData, parseSite } from '../lib/validate';
-import { isHttpUrl, slugify } from '../lib/sanitize';
+import { isHttpUrl } from '../lib/sanitize';
 
 export const adminApi = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -107,87 +105,15 @@ adminApi.get('/api/admin/nav', async (c) => {
   return c.json(writePayload(nav));
 });
 
-adminApi.post('/api/admin/categories', async (c) => {
-  const body = await c.req.json<{ name?: string; icon?: string; rev?: number }>();
-  const name = (body.name || '').trim();
-  if (!name) return c.json({ error: '分类名称不能为空' }, 400);
-  const current = await getNavData(c.env.BOOKMARKS_KV);
-  const conflict = revConflict(c, current, body);
-  if (conflict) return conflict;
-  const category = {
-    id: newId('cat'),
-    name,
-    slug: slugify(name),
-    icon: body.icon,
-    order: current.categories.length,
-    visible: true,
-    items: [],
-  };
-  current.categories.push(category);
-  const saved = await saveNav(c.env.BOOKMARKS_KV, current);
-  return c.json(writePayload(saved, { id: category.id }));
-});
-
-adminApi.patch('/api/admin/categories/:id', async (c) => {
-  const id = c.req.param('id');
-  const body = await c.req.json<Partial<{ name: string; icon: string; visible: boolean; slug: string; rev: number }>>();
-  const current = await getNavData(c.env.BOOKMARKS_KV);
-  const conflict = revConflict(c, current, body);
-  if (conflict) return conflict;
-  const cat = findCategory(current, id);
-  if (!cat) return c.json({ error: '分类不存在' }, 404);
-  if (typeof body.name === 'string') {
-    if (!body.name.trim()) return c.json({ error: '分类名称不能为空' }, 400);
-    cat.name = body.name.trim();
-  }
-  if (typeof body.icon === 'string') cat.icon = body.icon;
-  if (typeof body.visible === 'boolean') cat.visible = body.visible;
-  if (typeof body.slug === 'string') cat.slug = body.slug;
-  const saved = await saveNav(c.env.BOOKMARKS_KV, current);
-  return c.json(writePayload(saved));
-});
-
-adminApi.post('/api/admin/categories/:id/delete', async (c) => {
-  const id = c.req.param('id');
-  const body = await c.req.json<Record<string, unknown>>().catch(() => ({}));
-  const current = await getNavData(c.env.BOOKMARKS_KV);
-  const conflict = revConflict(c, current, body);
-  if (conflict) return conflict;
-  if (!findCategory(current, id)) return c.json({ error: '分类不存在' }, 404);
-  current.categories = current.categories.filter((x) => x.id !== id);
-  reindex(current.categories);
-  const saved = await saveNav(c.env.BOOKMARKS_KV, current);
-  return c.json(writePayload(saved));
-});
-
-adminApi.post('/api/admin/categories/reorder', async (c) => {
-  const body = await c.req.json<{ ids: string[]; rev?: number }>();
-  const { ids } = body;
-  if (!Array.isArray(ids)) return c.json({ error: 'ids 必须是数组' }, 400);
-  const current = await getNavData(c.env.BOOKMARKS_KV);
-  const conflict = revConflict(c, current, body);
-  if (conflict) return conflict;
-  const map = new Map(current.categories.map((c) => [c.id, c]));
-  const next = ids.map((id) => map.get(id)).filter(Boolean) as typeof current.categories;
-  for (const cat of current.categories) if (!ids.includes(cat.id)) next.push(cat);
-  reindex(next);
-  current.categories = next;
-  const saved = await saveNav(c.env.BOOKMARKS_KV, current);
-  return c.json(writePayload(saved));
-});
-
 adminApi.post('/api/admin/items', async (c) => {
   try {
     const body = await c.req.json<Record<string, unknown>>();
     const current = await getNavData(c.env.BOOKMARKS_KV);
     const conflict = revConflict(c, current, body);
     if (conflict) return conflict;
-    const categoryId = String(body.categoryId || '');
-    const cat = findCategory(current, categoryId);
-    if (!cat) return c.json({ error: '分类不存在' }, 400);
-    const item = parseItem({ ...body, order: cat.items.length }, cat.items.length);
+    const item = parseItem({ ...body, order: current.items.length }, current.items.length);
     const duplicates = findDuplicates(current, item.url);
-    cat.items.push(item);
+    current.items.push(item);
     const saved = await saveNav(c.env.BOOKMARKS_KV, current);
     return c.json(writePayload(saved, { id: item.id, duplicates: duplicates.map((d) => d.id) }));
   } catch (e) {
@@ -215,14 +141,6 @@ adminApi.patch('/api/admin/items/:id', async (c) => {
     if (typeof body.description === 'string') item.description = body.description;
     if (typeof body.visible === 'boolean') item.visible = body.visible;
     if (body.icon) item.icon = parseIcon(body.icon, item.url);
-    if (typeof body.categoryId === 'string' && body.categoryId !== found.category.id) {
-      const dest = findCategory(current, body.categoryId);
-      if (!dest) return c.json({ error: '目标分类不存在' }, 400);
-      found.category.items.splice(found.index, 1);
-      reindex(found.category.items);
-      item.order = dest.items.length;
-      dest.items.push(item);
-    }
     if (!item.title) return c.json({ error: '标题不能为空' }, 400);
     const duplicates = findDuplicates(current, item.url, item.id);
     const saved = await saveNav(c.env.BOOKMARKS_KV, current);
@@ -242,46 +160,24 @@ adminApi.post('/api/admin/items/:id/delete', async (c) => {
   if (conflict) return conflict;
   const found = findItem(current, id);
   if (!found) return c.json({ error: '链接不存在' }, 404);
-  found.category.items.splice(found.index, 1);
-  reindex(found.category.items);
+  current.items.splice(found.index, 1);
+  reindex(current.items);
   const saved = await saveNav(c.env.BOOKMARKS_KV, current);
   return c.json(writePayload(saved));
 });
 
 adminApi.post('/api/admin/items/reorder', async (c) => {
-  const body = await c.req.json<{ categoryId: string; ids: string[]; rev?: number }>();
-  const { categoryId, ids } = body;
+  const body = await c.req.json<{ ids: string[]; rev?: number }>();
+  const { ids } = body;
+  if (!Array.isArray(ids)) return c.json({ error: 'ids 必须是数组' }, 400);
   const current = await getNavData(c.env.BOOKMARKS_KV);
   const conflict = revConflict(c, current, body);
   if (conflict) return conflict;
-  const cat = findCategory(current, categoryId);
-  if (!cat) return c.json({ error: '分类不存在' }, 404);
-  const map = new Map(cat.items.map((i) => [i.id, i]));
-  const next = (ids || []).map((id) => map.get(id)).filter(Boolean) as Item[];
-  for (const it of cat.items) if (!ids.includes(it.id)) next.push(it);
+  const map = new Map(current.items.map((i) => [i.id, i]));
+  const next = ids.map((id) => map.get(id)).filter(Boolean) as Item[];
+  for (const item of current.items) if (!ids.includes(item.id)) next.push(item);
   reindex(next);
-  cat.items = next;
-  const saved = await saveNav(c.env.BOOKMARKS_KV, current);
-  return c.json(writePayload(saved));
-});
-
-adminApi.post('/api/admin/items/move', async (c) => {
-  const body = await c.req.json<{ ids: string[]; toCategoryId: string; rev?: number }>();
-  const { ids, toCategoryId } = body;
-  const current = await getNavData(c.env.BOOKMARKS_KV);
-  const conflict = revConflict(c, current, body);
-  if (conflict) return conflict;
-  const dest = findCategory(current, toCategoryId);
-  if (!dest) return c.json({ error: '目标分类不存在' }, 400);
-  for (const id of ids || []) {
-    const found = findItem(current, id);
-    if (!found) continue;
-    if (found.category.id === dest.id) continue;
-    found.category.items.splice(found.index, 1);
-    reindex(found.category.items);
-    found.item.order = dest.items.length;
-    dest.items.push(found.item);
-  }
+  current.items = next;
   const saved = await saveNav(c.env.BOOKMARKS_KV, current);
   return c.json(writePayload(saved));
 });
@@ -293,10 +189,8 @@ adminApi.post('/api/admin/items/bulk-delete', async (c) => {
   const current = await getNavData(c.env.BOOKMARKS_KV);
   const conflict = revConflict(c, current, body);
   if (conflict) return conflict;
-  for (const cat of current.categories) {
-    cat.items = cat.items.filter((i) => !set.has(i.id));
-    reindex(cat.items);
-  }
+  current.items = current.items.filter((i) => !set.has(i.id));
+  reindex(current.items);
   const saved = await saveNav(c.env.BOOKMARKS_KV, current);
   return c.json(writePayload(saved));
 });
@@ -336,7 +230,7 @@ adminApi.post('/api/admin/import', async (c) => {
     preview.format = format;
     if (body.preview) return c.json(preview);
     const merged = body.replace
-      ? { ...parseNavData(incoming), site: incoming.site || current.site, rev: current.rev }
+      ? { ...parseNavData(incoming), rev: current.rev }
       : mergeNav(current, incoming);
     const saved = await saveNav(c.env.BOOKMARKS_KV, merged);
     return c.json(writePayload(saved, preview));
