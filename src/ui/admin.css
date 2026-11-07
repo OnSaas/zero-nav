@@ -37,6 +37,11 @@ a:hover { text-decoration: underline; }
 .topbar nav a.active, .topbar nav a:hover {
   background: #efe8f8; text-decoration: none; color: var(--accent-2);
 }
+.top-actions { display: flex; align-items: center; gap: 8px; }
+.top-actions .btn, .top-actions button {
+  height: 34px; padding: 0 12px; font-size: 14px; line-height: 1;
+  border-radius: 8px; white-space: nowrap;
+}
 .brand { font-weight: 700; }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 18px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }

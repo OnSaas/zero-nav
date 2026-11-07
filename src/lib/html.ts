@@ -101,12 +101,14 @@ export function adminLayout(opts: {
       <a href="/admin/import" class="${opts.active === 'import' ? 'active' : ''}">导入</a>
       <a href="/admin/export" class="${opts.active === 'export' ? 'active' : ''}">导出</a>
       <a href="/admin/history" class="${opts.active === 'history' ? 'active' : ''}">历史</a>
-      <a href="/" target="_blank" rel="noopener">预览前台</a>
     </nav>
-    <form method="post" action="/admin/logout" style="margin:0">
-      <input type="hidden" name="csrf" value="${escapeAttr(opts.csrf)}">
-      <button class="ghost" type="submit">退出</button>
-    </form>
+    <div class="top-actions">
+      <a class="btn ghost" href="/" target="_blank" rel="noopener">前台</a>
+      <form method="post" action="/admin/logout" style="margin:0">
+        <input type="hidden" name="csrf" value="${escapeAttr(opts.csrf)}">
+        <button class="ghost" type="submit">退出</button>
+      </form>
+    </div>
   </header>
   <div class="wrap">
     ${s ? `<div class="cards">
