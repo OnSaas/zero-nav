@@ -3,6 +3,22 @@ import { DATA_KEY, HISTORY_PREFIX, HISTORY_TTL, LEGACY_KEY, defaultNavData, stat
 import { parseNavData } from './validate';
 import { fromLegacyBookmarks, looksLikeLegacyBookmarks } from './migrate';
 
+export const MAX_NAV_BYTES = 20 * 1024 * 1024;
+
+export class RevConflictError extends Error {
+  constructor(public readonly rev: number) {
+    super(`Rev conflict: stored rev is ${rev}`);
+    this.name = 'RevConflictError';
+  }
+}
+
+export class PayloadTooLargeError extends Error {
+  constructor(public readonly bytes: number) {
+    super(`数据过大：${(bytes / 1024 / 1024).toFixed(1)} MiB，超过 20 MiB 上限；请改用图标 URL 代替内联 SVG`);
+    this.name = 'PayloadTooLargeError';
+  }
+}
+
 export type HistoryEntry = {
   key: string;
   updatedAt?: string;
@@ -47,20 +63,35 @@ export async function backupNav(kv: KVNamespace, data: NavData): Promise<string>
 }
 
 export async function saveNav(kv: KVNamespace, data: NavData): Promise<NavData> {
-  const previous = await kv.get(DATA_KEY, 'json');
-  if (previous) {
+  const storedRaw = await kv.get(DATA_KEY, 'json');
+  let stored: NavData | null = null;
+  if (storedRaw) {
     try {
-      await backupNav(kv, parseNavData(previous));
+      stored = parseNavData(storedRaw);
     } catch {
-      await backupNav(kv, previous as NavData);
+      stored = null;
     }
   }
+
+  const currentRev = stored ? stored.rev : 0;
+  const expectedRev = typeof data.rev === 'number' ? data.rev : 0;
+  if (currentRev !== expectedRev) throw new RevConflictError(currentRev);
+
   const next: NavData = {
     ...data,
     v: 1,
+    rev: currentRev + 1,
     updatedAt: new Date().toISOString(),
   };
-  await kv.put(DATA_KEY, JSON.stringify(next));
+
+  const serialized = JSON.stringify(next);
+  const bytes = new TextEncoder().encode(serialized).length;
+  if (bytes > MAX_NAV_BYTES) throw new PayloadTooLargeError(bytes);
+
+  if (storedRaw) {
+    await backupNav(kv, stored || (storedRaw as NavData));
+  }
+  await kv.put(DATA_KEY, serialized);
   return next;
 }
 
@@ -91,7 +122,8 @@ export async function restoreHistory(kv: KVNamespace, key: string): Promise<NavD
   const raw = await kv.get(key, 'json');
   if (!raw) throw new Error('History not found');
   const snapshot = parseNavData(raw);
-  return saveNav(kv, snapshot);
+  const current = await getNavData(kv);
+  return saveNav(kv, { ...snapshot, rev: current.rev });
 }
 
 export function sortNav(nav: NavData): NavData {

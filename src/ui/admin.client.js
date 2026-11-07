@@ -9,6 +9,9 @@
     }
     const res = await fetch(path, Object.assign({ credentials: 'same-origin' }, opts, { headers }));
     const data = await res.json().catch(() => ({}));
+    if (res.status === 409) {
+      throw new Error('数据已在别处修改，请刷新页面后重试');
+    }
     if (!res.ok) throw new Error(data.error || res.statusText || '请求失败');
     return data;
   }

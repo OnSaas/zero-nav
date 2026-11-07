@@ -273,7 +273,7 @@ adminPages.post('/admin/import', async (c) => {
   try {
     const incoming = payloadToNav(format, String(body.payload || ''));
     const current = await getNavData(c.env.BOOKMARKS_KV);
-    const merged = body.replace === 'on' ? incoming : mergeNav(current, incoming);
+    const merged = body.replace === 'on' ? { ...incoming, rev: current.rev } : mergeNav(current, incoming);
     await saveNav(c.env.BOOKMARKS_KV, merged);
     return c.redirect('/admin');
   } catch (e) {

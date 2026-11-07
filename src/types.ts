@@ -47,6 +47,7 @@ export type SiteSettings = {
 
 export type NavData = {
   v: 1;
+  rev: number;
   updatedAt: string;
   site: SiteSettings;
   categories: Category[];
@@ -115,6 +116,7 @@ export const SVG_MAX_BYTES = 8192;
 export function defaultNavData(): NavData {
   return {
     v: 1,
+    rev: 0,
     updatedAt: new Date().toISOString(),
     site: {
       title: '在线服务',

@@ -103,6 +103,7 @@ export function parseNavData(raw: unknown): NavData {
   const categoriesRaw = Array.isArray(obj.categories) ? obj.categories : [];
   return {
     v: 1,
+    rev: asNum(obj.rev, 0),
     updatedAt: asString(obj.updatedAt) || new Date().toISOString(),
     site: parseSite(obj.site),
     categories: categoriesRaw.map((c, i) => parseCategory(c, i)),
