@@ -164,7 +164,7 @@ npx tsx scripts/migrate-from-zero-nav.ts bookmarks.json nav-data.json
 
 ## 后台与 API
 
-后台页面：`/admin`（单列表工作台，拖拽排序、显隐、删除）、`/admin/items`（全部链接）、`/admin/items/new`、`/admin/items/:id`、`/admin/settings`、`/admin/history`。
+后台页面：`/admin`（首页，单一链接列表，拖拽排序、显隐、删除）、`/admin/items`（全部链接）、`/admin/items/new`、`/admin/items/:id`、`/admin/settings`（站点设置、导入、导出、备份与恢复）。没有独立的备份历史页：备份与恢复在设置页，`/admin/history` 会 302 跳转到 `/admin/settings#backup`。
 
 已移除的分类相关接口：
 
@@ -195,13 +195,13 @@ npx tsx scripts/migrate-from-zero-nav.ts bookmarks.json nav-data.json
 
 ```
 /                    公开导航（单页扁平列表）
-/admin               工作台（单一链接列表）
+/admin               首页（单一链接列表）
 /admin/login
 /admin/items
 /admin/items/new
 /admin/settings
 /admin/import
 /admin/export
-/admin/history
+/admin/history       302 → /admin/settings#backup（备份与恢复）
 GET /api/public/nav
 ```
