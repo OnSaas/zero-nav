@@ -53,7 +53,7 @@ export function renderPublicPage(nav: NavData): string {
 </html>`;
 }
 
-type NavKey = 'dash' | 'items' | 'settings' | 'history';
+type NavKey = 'dash' | 'items' | 'settings';
 
 export function adminLayout(opts: {
   title: string;
@@ -79,7 +79,6 @@ export function adminLayout(opts: {
       <a href="/admin" class="${opts.active === 'dash' ? 'active' : ''}">工作台</a>
       <a href="/admin/items" class="${opts.active === 'items' ? 'active' : ''}">链接</a>
       <a href="/admin/settings" class="${opts.active === 'settings' ? 'active' : ''}">设置</a>
-      <a href="/admin/history" class="${opts.active === 'history' ? 'active' : ''}">历史</a>
     </nav>
     <div class="top-actions">
       <a class="btn ghost" href="/" target="_blank" rel="noopener">前台</a>

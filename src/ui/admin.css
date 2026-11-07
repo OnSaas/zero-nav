@@ -51,7 +51,7 @@ a:hover { text-decoration: underline; }
 .card .n { font-size: 28px; font-weight: 700; }
 .card .l { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .section-title { margin: 0 0 12px; font-size: 17px; }
-#export, #import { scroll-margin-top: 76px; }
+#export, #import, #backup { scroll-margin-top: 76px; }
 
 .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
 input, textarea, select, button {
@@ -195,7 +195,7 @@ th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--line); 
   .item-row { padding: 8px; gap: 6px; }
   .icon-btn { width: 34px; height: 34px; }
 
-  #export, #import { scroll-margin-top: 112px; }
+  #export, #import, #backup { scroll-margin-top: 112px; }
 }
 
 @media (max-width: 400px) {

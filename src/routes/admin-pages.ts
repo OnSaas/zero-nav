@@ -177,6 +177,26 @@ adminPages.get('/admin/settings', async (c) => {
         <div class="preview-box muted">预览结果会显示在这里</div>
       </form>`;
   }).join('');
+  const history = await listHistory(c.env.BOOKMARKS_KV);
+  const now = statsOf(nav);
+  const historyRows = history
+    .map((h) => {
+      const itemDiff = typeof h.items === 'number' ? h.items - now.items : null;
+      const diff = itemDiff !== null ? `链接 ${itemDiff >= 0 ? '+' : ''}${itemDiff}` : '';
+      return `<tr>
+        <td>${escapeHtml(h.updatedAt || h.key.replace('nav:history:', ''))}</td>
+        <td>${h.items ?? '-'}</td>
+        <td>${escapeHtml(diff || '—')}</td>
+        <td>
+          <form method="post" action="/admin/history/restore" data-confirm="确认回滚到该版本？当前数据会先备份。">
+            <input type="hidden" name="csrf" value="${escapeAttr(csrf)}">
+            <input type="hidden" name="key" value="${escapeAttr(h.key)}">
+            <button type="submit" class="secondary">回滚</button>
+          </form>
+        </td>
+      </tr>`;
+    })
+    .join('');
   const body = `<form class="card" method="post" action="/admin/settings">
     <input type="hidden" name="csrf" value="${escapeAttr(csrf)}">
     <div class="field"><label>站点标题</label><input name="title" value="${escapeAttr(s.title)}"></div>
@@ -199,6 +219,12 @@ adminPages.get('/admin/settings', async (c) => {
     <h2 class="section-title">导入</h2>
     <p>导入会先预览解析结果，确认后再写入。三种格式分开展示。</p>
     ${importForms}
+  </div>
+  <div class="card" id="backup" style="margin-top:14px">
+    <h2 class="section-title">备份与恢复</h2>
+    <p class="muted">写入前自动备份，保留 30 天。回滚会再写一条「回滚前」历史。</p>
+    <div class="table-scroll"><table><thead><tr><th>时间</th><th>当时链接</th><th>相对现在</th><th></th></tr></thead>
+    <tbody>${historyRows || '<tr><td colspan="4">还没有历史</td></tr>'}</tbody></table></div>
   </div>`;
   return c.html(adminLayout({ title: '设置', csrf, active: 'settings', nav, body }));
 });
@@ -245,36 +271,7 @@ adminPages.post('/admin/import', async (c) => {
 
 adminPages.get('/admin/export', (c) => c.redirect('/admin/settings#export'));
 
-adminPages.get('/admin/history', async (c) => {
-  const nav = await getNavData(c.env.BOOKMARKS_KV);
-  const items = await listHistory(c.env.BOOKMARKS_KV);
-  const csrf = c.get('csrf');
-  const now = statsOf(nav);
-  const rows = items
-    .map((h) => {
-      const itemDiff = typeof h.items === 'number' ? h.items - now.items : null;
-      const diff = itemDiff !== null ? `链接 ${itemDiff >= 0 ? '+' : ''}${itemDiff}` : '';
-      return `<tr>
-        <td>${escapeHtml(h.updatedAt || h.key.replace('nav:history:', ''))}</td>
-        <td>${h.items ?? '-'}</td>
-        <td>${escapeHtml(diff || '—')}</td>
-        <td>
-          <form method="post" action="/admin/history/restore" data-confirm="确认回滚到该版本？当前数据会先备份。">
-            <input type="hidden" name="csrf" value="${escapeAttr(csrf)}">
-            <input type="hidden" name="key" value="${escapeAttr(h.key)}">
-            <button type="submit" class="secondary">回滚</button>
-          </form>
-        </td>
-      </tr>`;
-    })
-    .join('');
-  const body = `<div class="card">
-    <p class="muted">写入前自动备份，保留 30 天。回滚会再写一条「回滚前」历史。</p>
-    <div class="table-scroll"><table><thead><tr><th>时间</th><th>当时链接</th><th>相对现在</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="4">还没有历史</td></tr>'}</tbody></table></div>
-  </div>`;
-  return c.html(adminLayout({ title: '历史', csrf, active: 'history', nav, body }));
-});
+adminPages.get('/admin/history', (c) => c.redirect('/admin/settings#backup'));
 
 adminPages.post('/admin/history/restore', async (c) => {
   const body = await c.req.parseBody();
