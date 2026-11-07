@@ -28,7 +28,7 @@ export function renderPublicPage(nav: NavData): string {
       const desc = data.site.showDescription && item.description
         ? `<span class="site-description">${escapeHtml(item.description)}</span>`
         : '';
-      return `<li><a href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">${renderIcon(item.icon)}<span class="site-name">${escapeHtml(item.title)}</span>${desc}</a></li>`;
+      return `<li><a href="${escapeAttr(item.url)}" target="_blank" rel="noopener noreferrer">${renderIcon(item.icon)}<span class="site-text"><span class="site-name">${escapeHtml(item.title)}</span>${desc}</span></a></li>`;
     })
     .join('');
 

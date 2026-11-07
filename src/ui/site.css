@@ -51,9 +51,11 @@ svg {
 }
 
 main {
-    max-width: var(--value-max-width-page);
+    box-sizing: border-box;
+    width: 100%;
     max-width: 24rem;
     margin: 0 auto;
+    padding: 0 1rem;
 }
 
 @media (min-width:24.5rem) {
@@ -69,11 +71,25 @@ main {
 }
 
 h1 {
-    font-size: larger;
-    font-size: 2.5rem;
-    line-height: 1;
+    font-size: clamp(1.5rem, 1.1rem + 2.2vw, 2.5rem);
+    line-height: 1.1;
     font-weight: bold;
-    margin: 3rem;
+    margin: 1.5rem 0 1rem;
+    overflow-wrap: anywhere;
+}
+
+h1 a {
+    display: inline-block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+@media (min-width:44rem) {
+    h1 {
+        font-size: 2.5rem;
+        line-height: 1;
+        margin: 3rem;
+    }
 }
 
 .loading{
@@ -82,15 +98,19 @@ h1 {
 }
 /* 网站列表 */
 .category-list {
-    display: block;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
 }
 
 .category-list li {
     border-radius: 12px;
-    display: inline-block;
+    display: block;
+    min-width: 0;
     border: 2px #ddd solid;
-    margin-bottom: .6rem;
-    margin-right: .8rem;
 }
 
 .category-list li a {
@@ -98,8 +118,49 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: left;
-    min-width: 15rem;
-    padding: 1.5rem 1.8rem;
+    gap: .5rem;
+    min-width: 0;
+    min-height: 44px;
+    padding: .9rem 1rem;
+}
+
+.category-list li a > svg,
+.category-list li a > img {
+    flex: 0 0 auto;
+    margin-right: 0;
+}
+
+.site-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.site-name {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (min-width:30rem) {
+    .category-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width:44rem) {
+    .category-list li a {
+        padding: 1.5rem 1.8rem;
+    }
+}
+
+@media (min-width:60rem) {
+    .category-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 .category-list li:hover {
@@ -117,11 +178,14 @@ footer {
     flex: 1;
     align-items: end;
     justify-content: center;
+    padding: 1rem;
 }
 
 footer div {
     font-size: 14px;
     color: var(--color-text-secondary);
+    text-align: center;
+    overflow-wrap: anywhere;
 }
 
 footer div a {
@@ -172,7 +236,10 @@ footer a:hover {
     font-size: 12px;
     color: var(--color-text-secondary);
     margin-top: 4px;
-    max-width: 14rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .hidden-block { display: none; }
