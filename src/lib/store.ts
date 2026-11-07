@@ -146,7 +146,8 @@ export function publicNav(nav: NavData): NavData {
         ...c,
         items: c.items.filter((i) => i.visible),
       }))
-      .filter((c) => c.items.length > 0 || true),
+      // Empty categories (no visible items) are hidden on the public homepage; admin still sees them.
+      .filter((c) => c.items.length > 0),
   };
 }
 
